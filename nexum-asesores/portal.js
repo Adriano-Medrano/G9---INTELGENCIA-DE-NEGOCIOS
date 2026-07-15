@@ -1043,6 +1043,8 @@ function renderProvisionAlerts() {
 
 /* ══════════════════════════════════════════════════════════
    7. CHATBOT PRIVADO (Capa 2 — autenticado)
+   Motor NLP mejorado: fuzzy matching + respuestas dinámicas
+   desde DATA (reportes BI) + fallback contextual inteligente
    ══════════════════════════════════════════════════════════ */
 function renderChatSuggestions() {
   const el = document.getElementById('chatSuggestions');
@@ -1054,6 +1056,9 @@ function renderChatSuggestions() {
     '¿Cómo está mi score de riesgo?',
     '¿Cuánto tengo proyectado a 60 días?',
     '¿Qué declaraciones tengo pendientes?',
+    '¿Cuál es mi facturación mensual?',
+    '¿Cómo va el pipeline ETL?',
+    '¿Qué alertas tengo activas?',
   ];
 
   el.innerHTML = suggestions.map(s => `
@@ -1079,46 +1084,309 @@ function initPrivateChatbot() {
   const quickR     = document.getElementById('privQuickReplies');
   if (!messagesEl || !inputEl || !sendBtn) return;
 
-  const DISCLAIMER = '<span class="disclaimer-note">ℹ️ Orientativo. Consulta con tu asesor para decisiones formales.</span>';
+  /* ── Helpers de datos BI (lee de DATA o MOCK_DATA como fallback) ── */
+  const D = () => (Object.keys(DATA).length > 0 ? DATA : MOCK_DATA);
 
+  const fmt = (n) => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+
+  const DISCLAIMER = '\n\n<span class="disclaimer-note">ℹ️ Orientativo. Consulta con tu asesor para decisiones formales.</span>';
+
+  /* ── Intents: cada uno conectado a los datos BI del dashboard ── */
   const PRIVATE_INTENTS = [
     {
-      keywords: ['provisionar', 'provisión', 'cuánto debo', 'reservar', 'apartar', 'fondos'],
+      id: 'provisionar',
+      keywords: ['provisionar', 'provisión', 'cuánto debo', 'reservar', 'apartar', 'fondos', 'separar', 'guardar dinero', 'cuanto pagar'],
+      label: '💰 Provisiones del mes',
       answer() {
-        return `Este mes tienes dos vencimientos urgentes:\n\n• **Modelo 111 + 115**: €4.730 (vence 20 jul)\n• **Impuesto Sociedades**: €12.400 (vence 25 jul)\n\n**Total a provisionar: €17.130**\n\nTu caja proyectada actual es €31.450. Después de estos pagos quedarías con ~€14.320, que cubre el IVA Q3 de octubre (€7.240). Recomiendo apartar los €17.130 esta semana.${DISCLAIMER}`;
+        const d = D();
+        const urgentes = (d.vencimientos || []).filter(v => v.tipo === 'urgente' || v.tipo === 'proximo');
+        const totalUrgente = urgentes.reduce((s, v) => s + v.importe, 0);
+        const saldo = d.flujoCaja?.saldo_actual || 31450;
+        const lines = urgentes.map(v => `• **${v.modelo}**: ${fmt(v.importe)} (${v.fecha})`).join('\n');
+        const restante = saldo - totalUrgente;
+        return `Este mes tienes **${urgentes.length} vencimientos** próximos:\n\n${lines}\n\n**Total a provisionar: ${fmt(totalUrgente)}**\n\nTu caja actual es ${fmt(saldo)}. Después de estos pagos quedarías con ~${fmt(restante)}. ${restante < 10000 ? '⚠️ **Caja ajustada**, revisa tu flujo de caja.' : '✅ Caja suficiente para cubrir.'}${DISCLAIMER}`;
       },
+      followUp: ['¿Y mi flujo de caja a 90 días?', '¿Cuándo vence el próximo modelo?', '¿Cómo está mi riesgo fiscal?'],
     },
     {
-      keywords: ['próximo vencimiento', 'cuando vence', 'cuándo tengo', 'qué debo presentar', 'siguiente'],
+      id: 'vencimientos',
+      keywords: ['próximo vencimiento', 'cuando vence', 'cuándo tengo', 'qué debo presentar', 'siguiente', 'vencimiento', 'modelo', 'fecha limite', 'plazo'],
+      label: '📅 Vencimientos fiscales',
       answer() {
-        return `Tu **próximo vencimiento** es en **6 días**:\n\n• **Modelo 111** (IRPF Retenciones Q2) — 20 julio 2026 — €3.840\n• **Modelo 115** (Retención alquiler Q2) — 20 julio 2026 — €890\n• **Modelo 130** (Fraccionado IRPF) — 20 julio 2026 — €1.200\n\nTotal el 20 de julio: **€5.930**\n\nA continuación: Impuesto Sociedades 2025 el 25 de julio (€12.400).${DISCLAIMER}`;
+        const d = D();
+        const pendientes = (d.vencimientos || []).filter(v => v.tipo !== 'completado');
+        const completados = (d.vencimientos || []).filter(v => v.tipo === 'completado');
+        if (pendientes.length === 0) return `✅ No tienes vencimientos pendientes por ahora. ¡Todo al día!\n\nDeclaraciones ya presentadas: ${completados.length}${DISCLAIMER}`;
+        const lines = pendientes.map(v => {
+          const icon = v.tipo === 'urgente' ? '🔴' : v.tipo === 'proximo' ? '🟡' : '🟢';
+          return `${icon} **${v.modelo}** — ${v.fecha} (${v.diasRestantes}d) — ${fmt(v.importe)}`;
+        }).join('\n');
+        return `Tu **calendario fiscal pendiente**:\n\n${lines}\n\n✅ Ya presentados este año: **${completados.length}** declaraciones.${DISCLAIMER}`;
       },
+      followUp: ['¿Cuánto debo provisionar?', '¿Mis declaraciones presentadas?', '¿Proyección de caja a 60 días?'],
     },
     {
-      keywords: ['score', 'riesgo', 'situación fiscal', 'cómo estoy', 'peligro', 'multa'],
+      id: 'score_riesgo',
+      keywords: ['score', 'riesgo', 'situación fiscal', 'cómo estoy', 'peligro', 'multa', 'riesgo fiscal', 'nivel riesgo', 'puntuación'],
+      label: '🛡️ Score de riesgo',
       answer() {
-        return `Tu **score de riesgo fiscal actual** es **42/100** 🟡 (riesgo moderado).\n\nLos factores que más influyen:\n\n• ⚠️ Facturas de fallecidos: 1 detectada (riesgo crítico)\n• ✅ Identidades válidas: 100% en el padrón RENIEC (bueno)\n• ⚠️ Desviación de ubigeo: 15% de compras (a vigilar)\n• ✅ Suplantación de representante: No detectada (bueno)\n\nTe sugerimos usar el **Verificador KYC** antes de trabajar con nuevos proveedores.`;
+        const d = D();
+        const sr = d.scoreRiesgo || MOCK_DATA.scoreRiesgo;
+        const score = sr.score || 42;
+        const nivel = sr.nivel || 'moderado';
+        const emoji = score <= 30 ? '🟢' : score <= 60 ? '🟡' : '🔴';
+        const features = sr.features || [];
+        const lines = features.map(f => {
+          const ic = f.estado === 'good' ? '✅' : f.estado === 'warn' ? '⚠️' : '🚨';
+          return `${ic} ${f.name}: ${f.valor} (importancia: ${f.importancia}%)`;
+        }).join('\n');
+        const variacion = sr.variacion_vs_trimestre || -8;
+        const variTxt = variacion < 0 ? `📉 Bajó ${Math.abs(variacion)} pts vs trimestre anterior (mejorando)` : `📈 Subió ${variacion} pts vs trimestre anterior (a vigilar)`;
+        return `Tu **score de riesgo fiscal**: **${score}/100** ${emoji} (${nivel})\n\n${variTxt}\n\n**Factores principales:**\n${lines}\n\nDNIs sospechosos: ${sr.n_dni_sospechosos || 1} | Alertas KYC activas: ${sr.alertas_kyc_activas || 2}\n\n💡 Usa el **Verificador KYC** del portal para validar nuevos proveedores.${DISCLAIMER}`;
       },
+      followUp: ['¿Qué alertas tengo activas?', '¿Verificar un DNI con RENIEC?', '¿Mi flujo de caja?'],
     },
     {
-      keywords: ['flujo de caja', 'cuánto tengo', 'proyección', '30 días', '60 días', '90 días', 'saldo'],
+      id: 'flujo_caja',
+      keywords: ['flujo de caja', 'cuánto tengo', 'proyección', '30 días', '60 días', '90 días', 'saldo', 'caja', 'prophet', 'predicción caja', 'efectivo'],
+      label: '📊 Flujo de caja',
       answer() {
-        return `Tu **proyección de flujo de caja** según el modelo Prophet:\n\n• Hoy: **€31.450** (saldo actual)\n• En 30 días: **€24.800** (tras vencimientos julio)\n• En 60 días: **€18.200** (agosto tranquilo)\n• En 90 días: **€9.100** ⚠️ (antes de IVA Q3)\n\n**Acción recomendada**: antes del 10 de octubre, asegúrate de tener €7.240 reservados para el IVA Q3.${DISCLAIMER}`;
+        const d = D();
+        const fc = d.flujoCaja || MOCK_DATA.flujoCaja;
+        const saldo = fc.saldo_actual || 31450;
+        const p30 = fc.proyeccion_30d || 24800;
+        const p60 = fc.proyeccion_60d || 18200;
+        const p90 = fc.proyeccion_90d || 9100;
+        const alertaP90 = p90 < 10000 ? '\n\n⚠️ **Alerta**: Tu caja proyectada a 90 días es inferior a €10.000. Revisa los vencimientos de octubre y anticipa la provisión.' : '';
+        return `**Proyección de flujo de caja** (modelo Prophet):\n\n• 📍 Hoy: **${fmt(saldo)}** (saldo actual)\n• 📅 En 30 días: **${fmt(p30)}**\n• 📅 En 60 días: **${fmt(p60)}**\n• 📅 En 90 días: **${fmt(p90)}** ${p90 < 10000 ? '⚠️' : '✅'}${alertaP90}${DISCLAIMER}`;
       },
+      followUp: ['¿Cuánto debo provisionar?', '¿Mi score de riesgo?', '¿Mis vencimientos próximos?'],
     },
     {
-      keywords: ['declaraciones', 'pendientes', 'presentadas', 'cumplimiento', 'historial'],
+      id: 'declaraciones',
+      keywords: ['declaraciones', 'pendientes', 'presentadas', 'cumplimiento', 'historial declaraciones', 'ratio cumplimiento', 'irpf', 'iva', 'impuestos'],
+      label: '📋 Declaraciones',
       answer() {
-        return `Tu **estado de declaraciones 2026**:\n\n✅ Presentadas a tiempo: 7/9\n⏳ Pendiente: **Modelo 111 Q2** (vence 20 julio)\n⚠️ Con retraso histórico: 1 (Modelo 303 Q1, sin sanción)\n\n**Ratio de cumplimiento: 89%** — objetivo mínimo recomendado: 95%.\n\nTu asesora Laura García está preparando el Modelo 111 para presentación antes del 18 de julio.${DISCLAIMER}`;
+        const d = D();
+        const vencs = d.vencimientos || MOCK_DATA.vencimientos;
+        const completados = vencs.filter(v => v.tipo === 'completado');
+        const pendientes = vencs.filter(v => v.tipo !== 'completado');
+        const total = vencs.length;
+        const ratio = total > 0 ? Math.round((completados.length / total) * 100) : 0;
+        const pendLines = pendientes.length > 0
+          ? pendientes.map(v => `⏳ **${v.modelo}** — vence ${v.fecha}`).join('\n')
+          : '✅ Ninguna pendiente';
+        const compLines = completados.map(v => `✅ ${v.modelo} — presentada ${v.fecha}`).join('\n');
+        return `**Estado de declaraciones 2026:**\n\n**Pendientes (${pendientes.length}):**\n${pendLines}\n\n**Presentadas (${completados.length}):**\n${compLines}\n\n**Ratio de cumplimiento: ${ratio}%** — objetivo recomendado: 95%.${DISCLAIMER}`;
       },
+      followUp: ['¿Cuándo vence el próximo?', '¿Cuánto provisionar?', 'Hablar con mi asesora'],
     },
     {
-      keywords: ['asesor', 'laura', 'hablar', 'contactar', 'llamar', 'reunión'],
-      answer: () => `Tu asesora asignada es **Laura García** — Especialista Fiscal Senior.\n\nPuedes contactarla:\n• **Email**: laura.garcia@nexumasesores.es\n• **WhatsApp**: +34 612 345 678\n• **Horario**: L-J 9-18h, V 9-15h\n\n[Escribir por WhatsApp](https://wa.me/34612345678)`,
+      id: 'facturacion',
+      keywords: ['facturación', 'facturacion', 'ingresos', 'ventas', 'cuánto facturé', 'factura', 'mensual', 'trimestral', 'revenue'],
+      label: '💵 Facturación',
+      answer() {
+        const d = D();
+        const f = d.facturacion || MOCK_DATA.facturacion;
+        const labels = f.labels || [];
+        const data = f.data || [];
+        const total = data.reduce((s, v) => s + v, 0);
+        const avg = data.length > 0 ? Math.round(total / data.length) : 0;
+        const max = Math.max(...data);
+        const maxMonth = labels[data.indexOf(max)] || '—';
+        const min = Math.min(...data);
+        const minMonth = labels[data.indexOf(min)] || '—';
+        const lines = labels.map((l, i) => `• **${l}**: ${fmt(data[i])}`).join('\n');
+        // Tendencia
+        const lastTwo = data.slice(-2);
+        const trend = lastTwo.length === 2 ? (lastTwo[1] >= lastTwo[0] ? '📈 Tendencia al alza' : '📉 Tendencia a la baja') : '';
+        return `**Facturación mensual 2026:**\n\n${lines}\n\n📊 **Total acumulado**: ${fmt(total)}\n📊 **Promedio mensual**: ${fmt(avg)}\n🏆 **Mejor mes**: ${maxMonth} (${fmt(max)})\n📉 **Menor mes**: ${minMonth} (${fmt(min)})\n${trend}${DISCLAIMER}`;
+      },
+      followUp: ['¿Mi flujo de caja?', '¿Score de riesgo?', '¿Vencimientos pendientes?'],
+    },
+    {
+      id: 'alertas',
+      keywords: ['alerta', 'alertas', 'notificaciones', 'avisos', 'urgente', 'problemas', 'advertencias'],
+      label: '🔔 Alertas activas',
+      answer() {
+        const d = D();
+        const alertas = d.alertas || MOCK_DATA.alertas;
+        const danger = alertas.filter(a => a.tipo === 'danger');
+        const warning = alertas.filter(a => a.tipo === 'warning');
+        const info = alertas.filter(a => a.tipo === 'info');
+        const dangerLines = danger.map(a => `🔴 **${a.titulo}**\n   ${a.desc}`).join('\n\n');
+        const warnLines = warning.map(a => `🟡 **${a.titulo}**\n   ${a.desc}`).join('\n\n');
+        const infoLines = info.map(a => `🔵 ${a.titulo}`).join('\n');
+        let resp = `**Alertas activas** (${alertas.length} total):\n\n`;
+        if (danger.length > 0) resp += `**🚨 Críticas (${danger.length}):**\n${dangerLines}\n\n`;
+        if (warning.length > 0) resp += `**⚠️ Advertencias (${warning.length}):**\n${warnLines}\n\n`;
+        if (info.length > 0) resp += `**ℹ️ Informativas (${info.length}):**\n${infoLines}`;
+        return resp + DISCLAIMER;
+      },
+      followUp: ['¿Mi score de riesgo?', '¿Cuánto provisionar?', 'Hablar con mi asesora'],
+    },
+    {
+      id: 'etl_pipeline',
+      keywords: ['etl', 'pipeline', 'datos', 'carga', 'bronze', 'silver', 'gold', 'estado datos', 'procesamiento', 'minio', 'ingesta'],
+      label: '⚙️ Pipeline ETL',
+      answer() {
+        const d = D();
+        const steps = d.etlSteps || MOCK_DATA.etlSteps;
+        const lines = steps.map(s => {
+          const icon = s.status === 'ok' ? '✅' : s.status === 'running' ? '🔄' : '❌';
+          return `${icon} **${s.label}** (${s.desc}) — ${s.status === 'running' ? 'En ejecución' : `completado ${s.time}`}`;
+        }).join('\n');
+        const allOk = steps.every(s => s.status === 'ok' || s.status === 'running');
+        return `**Estado del pipeline de datos:**\n\n${lines}\n\n${allOk ? '✅ **Pipeline saludable** — todos los pasos ejecutados correctamente.' : '⚠️ Hay pasos con errores. Contacta al equipo técnico.'}${DISCLAIMER}`;
+      },
+      followUp: ['¿Cómo van los DAGs?', '¿Mis datos están actualizados?', '¿Mi score de riesgo?'],
+    },
+    {
+      id: 'dags',
+      keywords: ['dag', 'dags', 'airflow', 'tareas programadas', 'retrain', 'reentrenamiento', 'modelo ml', 'xgboost', 'machine learning'],
+      label: '🤖 DAGs & Modelos ML',
+      answer() {
+        const d = D();
+        const dags = d.dags || MOCK_DATA.dags;
+        const lines = dags.map(dag => {
+          const icon = dag.status === 'success' ? '✅' : dag.status === 'running' ? '🔄' : '❌';
+          return `${icon} **${dag.name}**\n   Horario: ${dag.schedule} | Última ejecución: ${dag.lastRun}`;
+        }).join('\n\n');
+        return `**Estado de DAGs y modelos:**\n\n${lines}\n\n💡 Los modelos XGBoost (score de riesgo) y Prophet (flujo de caja) se reentrenan semanalmente los lunes a las 05:00.${DISCLAIMER}`;
+      },
+      followUp: ['¿Cómo va el pipeline ETL?', '¿Mi score de riesgo actual?', '¿Proyección de caja?'],
+    },
+    {
+      id: 'kyc_verificar',
+      keywords: ['kyc', 'verificar', 'reniec', 'dni', 'identidad', 'proveedor', 'validar', 'comprobar', 'fallecido', 'suplantacion', 'tax shield'],
+      label: '🔍 Verificación KYC',
+      answer() {
+        return `Para verificar un DNI contra la base RENIEC, usa el **Verificador KYC Tax Shield** disponible en la sección "KYC & Tax Shield" del portal.\n\nEl verificador comprueba:\n• ✅ Si el DNI existe en el padrón electoral\n• ✅ Estado de vida (vivo/fallecido)\n• ✅ Coherencia geográfica del ubigeo\n• ✅ Score predictivo de riesgo de suplantación\n\n💡 **Consejo**: Verifica siempre antes de operar con un proveedor nuevo. Una factura de un DNI fallecido es una alerta crítica de fraude.${DISCLAIMER}`;
+      },
+      followUp: ['¿Mi score de riesgo?', '¿Qué alertas tengo?', '¿Declaraciones pendientes?'],
+    },
+    {
+      id: 'cliente_info',
+      keywords: ['mi empresa', 'mi plan', 'datos empresa', 'tecnopyme', 'sector', 'qué plan tengo', 'mi cuenta', 'perfil'],
+      label: '🏢 Datos de tu empresa',
+      answer() {
+        const d = D();
+        const c = d.cliente || MOCK_DATA.cliente;
+        return `**Datos de tu cuenta Nexum:**\n\n• **Empresa**: ${c.nombre}\n• **ID Cliente**: ${c.id}\n• **Sector**: ${c.sector}\n• **Plan activo**: ${c.plan}\n• **Asesora asignada**: ${c.asesor}\n\n¿Necesitas actualizar algún dato? Contacta directamente a tu asesora.`;
+      },
+      followUp: ['Hablar con mi asesora', '¿Mi score de riesgo?', '¿Mi facturación mensual?'],
+    },
+    {
+      id: 'asesor_contacto',
+      keywords: ['asesor', 'asesora', 'laura', 'hablar', 'contactar', 'llamar', 'reunión', 'whatsapp', 'email', 'cita', 'agendar'],
+      label: '👩‍💼 Contactar asesora',
+      answer() {
+        const d = D();
+        const c = d.cliente || MOCK_DATA.cliente;
+        return `Tu asesora asignada es **${c.asesor || 'Laura García'}** — Especialista Fiscal Senior.\n\nPuedes contactarla:\n• **Email**: laura.garcia@nexumasesores.es\n• **WhatsApp**: +34 612 345 678\n• **Horario**: L-J 9-18h, V 9-15h\n\n[Escribir por WhatsApp](https://wa.me/34612345678)`;
+      },
+      followUp: ['¿Mis vencimientos?', '¿Mi score de riesgo?', '¿Cuánto provisionar?'],
+    },
+    {
+      id: 'saludo',
+      keywords: ['hola', 'buenos dias', 'buenas tardes', 'buenas noches', 'buenas', 'hey', 'saludos', 'qué tal', 'buen dia'],
+      label: '👋 Saludo',
+      isGreeting: true,
+      answer() {
+        const d = D();
+        const c = d.cliente || MOCK_DATA.cliente;
+        return `¡Hola! 👋 Soy tu asistente fiscal privado conectado a los datos de **${c.nombre}**.\n\nPuedo ayudarte con:\n\n• 💰 **Provisiones y pagos** del mes\n• 📅 **Vencimientos** fiscales pendientes\n• 🛡️ **Score de riesgo** fiscal y KYC\n• 📊 **Flujo de caja** y proyecciones\n• 💵 **Facturación** mensual\n• 🔔 **Alertas** activas\n• ⚙️ **Pipeline ETL** y estado de datos\n• 🤖 **DAGs** y modelos ML\n• 🔍 **Verificación KYC** RENIEC\n\n¿En qué puedo ayudarte?`;
+      },
+      followUp: ['¿Cuánto provisionar?', '¿Mi score de riesgo?', '¿Mis vencimientos?', '¿Mi facturación?'],
+    },
+    {
+      id: 'gracias',
+      keywords: ['gracias', 'perfecto', 'genial', 'ok', 'entendido', 'vale', 'de acuerdo', 'listo', 'excelente', 'muchas gracias'],
+      label: '🙏 Agradecimiento',
+      answer() {
+        return `¡De nada! 😊 Estoy aquí para ayudarte cuando necesites.\n\n¿Hay algo más que quieras consultar sobre tus datos fiscales?`;
+      },
+      followUp: ['¿Mi score de riesgo?', '¿Cuánto provisionar?', '¿Mis alertas?', 'Hablar con mi asesora'],
+    },
+    {
+      id: 'ayuda',
+      keywords: ['ayuda', 'help', 'qué puedes hacer', 'opciones', 'menú', 'menu', 'comandos', 'qué sabes', 'funciones'],
+      label: '❓ Ayuda',
+      answer() {
+        return `Puedo responder sobre los siguientes **reportes BI** de tu empresa:\n\n• 💰 **Provisiones** → "¿Cuánto debo provisionar?"\n• 📅 **Vencimientos** → "¿Cuándo vence mi próximo modelo?"\n• 🛡️ **Riesgo fiscal** → "¿Cómo está mi score?"\n• 📊 **Flujo de caja** → "¿Mi proyección a 90 días?"\n• 📋 **Declaraciones** → "¿Qué declaraciones tengo pendientes?"\n• 💵 **Facturación** → "¿Cuánto facturé este mes?"\n• 🔔 **Alertas** → "¿Qué alertas tengo?"\n• ⚙️ **Pipeline ETL** → "¿Cómo va la carga de datos?"\n• 🤖 **DAGs/ML** → "¿Se reentrenó el modelo?"\n• 🔍 **KYC RENIEC** → "¿Cómo verifico un DNI?"\n• 🏢 **Mi empresa** → "¿Qué plan tengo?"\n• 👩‍💼 **Mi asesora** → "Contactar a Laura"\n\n💡 Escribe tu pregunta con tus propias palabras, te entiendo aunque no sea textual.`;
+      },
+      followUp: ['¿Mi score de riesgo?', '¿Cuánto provisionar?', '¿Mis alertas?'],
     },
   ];
 
-  const FALLBACK_PRIVATE = `No tengo esa información en tus datos actuales, o la consulta requiere análisis más detallado.\n\nPuedo conectarte directamente con **Laura García**, tu asesora asignada, para que te responda hoy.${DISCLAIMER}`;
+  /* ── Motor NLP: fuzzy matching mejorado ── */
+  function normalize(str) {
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[¿¡?!.,;:]/g, '');
+  }
+
+  function tokenize(str) {
+    return normalize(str).split(/\s+/).filter(w => w.length > 1);
+  }
+
+  // Distancia de Levenshtein para fuzzy matching
+  function levenshtein(a, b) {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0)
+        );
+    return dp[m][n];
+  }
+
+  function fuzzyWordMatch(queryWord, keyword) {
+    if (keyword.includes(queryWord) || queryWord.includes(keyword)) return 1;
+    const maxDist = Math.max(1, Math.floor(keyword.length * 0.35));
+    return levenshtein(queryWord, keyword) <= maxDist ? 0.7 : 0;
+  }
+
+  function findPrivAnswer(query) {
+    const qNorm = normalize(query);
+    const qTokens = tokenize(query);
+    let best = null, bestScore = 0;
+
+    PRIVATE_INTENTS.forEach(intent => {
+      let score = 0;
+
+      // 1. Coincidencia exacta de frases keyword (mayor peso)
+      intent.keywords.forEach(kw => {
+        const kwNorm = normalize(kw);
+        if (qNorm.includes(kwNorm)) {
+          score += 3 * kwNorm.split(/\s+/).length; // más peso a frases largas
+        }
+      });
+
+      // 2. Fuzzy matching por tokens individuales
+      if (score === 0) {
+        intent.keywords.forEach(kw => {
+          const kwTokens = tokenize(kw);
+          kwTokens.forEach(kwt => {
+            qTokens.forEach(qt => {
+              const match = fuzzyWordMatch(qt, kwt);
+              if (match > 0) score += match;
+            });
+          });
+        });
+      }
+
+      if (score > bestScore) { best = intent; bestScore = score; }
+    });
+
+    // Umbral mínimo: al menos 0.7 para considerar un match
+    return bestScore >= 0.7 ? best : null;
+  }
 
   let msgCount = 0;
 
@@ -1129,6 +1397,12 @@ function initPrivateChatbot() {
     bubble.className = 'priv-bubble';
     bubble.innerHTML = simpleMarkdown(text);
     div.appendChild(bubble);
+    // Timestamp
+    const timeEl = document.createElement('span');
+    timeEl.className = 'priv-msg-time';
+    timeEl.textContent = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    timeEl.style.cssText = 'font-size:.6rem;color:rgba(10,22,40,.3);margin-top:.15rem;display:block;text-align:' + (role === 'user' ? 'left' : 'right');
+    div.appendChild(timeEl);
     messagesEl.appendChild(div);
     messagesEl.scrollTop = messagesEl.scrollHeight;
     msgCount++;
@@ -1153,19 +1427,6 @@ function initPrivateChatbot() {
     return div;
   }
 
-  function findPrivAnswer(query) {
-    const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    let best = null, bestScore = 0;
-    PRIVATE_INTENTS.forEach(intent => {
-      const score = intent.keywords.reduce((acc, kw) => {
-        const n = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return acc + (q.includes(n) ? 1 : 0);
-      }, 0);
-      if (score > bestScore) { best = intent; bestScore = score; }
-    });
-    return bestScore > 0 ? best : null;
-  }
-
   function setPrivQuickReplies(replies) {
     quickR.innerHTML = '';
     replies.forEach(r => {
@@ -1181,6 +1442,15 @@ function initPrivateChatbot() {
     });
   }
 
+  /* ── Fallback contextual: nunca deja al usuario sin opciones ── */
+  function buildContextualFallback(query) {
+    const topics = PRIVATE_INTENTS
+      .filter(i => !i.isGreeting && i.id !== 'gracias' && i.id !== 'ayuda')
+      .map(i => `• ${i.label}`)
+      .join('\n');
+    return `No encontré una coincidencia exacta para tu consulta, pero puedo ayudarte con estos **reportes BI disponibles**:\n\n${topics}\n\n💡 Intenta reformular tu pregunta o elige una de las opciones de arriba.\n\nSi necesitas algo fuera de estos temas, puedo conectarte con **${(D().cliente || MOCK_DATA.cliente).asesor || 'tu asesora'}**.`;
+  }
+
   async function handlePrivSend() {
     const text = inputEl.value.trim();
     if (!text) return;
@@ -1190,41 +1460,34 @@ function initPrivateChatbot() {
 
     addPrivMsg(text, 'user');
     const typing = showPrivTyping();
-    await new Promise(r => setTimeout(r, 700 + Math.random() * 500));
+    await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
     typing.remove();
 
     const match = findPrivAnswer(text);
     if (match) {
-      addPrivMsg(typeof match.answer === 'function' ? match.answer() : match.answer, 'bot');
-      setPrivQuickReplies(['¿Y el riesgo fiscal?', '¿Qué declaraciones tengo pendientes?', 'Hablar con mi asesor']);
+      const answer = typeof match.answer === 'function' ? match.answer() : match.answer;
+      addPrivMsg(answer, 'bot');
+      setPrivQuickReplies(match.followUp || ['¿Mi score de riesgo?', '¿Declaraciones pendientes?', 'Hablar con mi asesora']);
     } else {
-      addPrivMsg(FALLBACK_PRIVATE, 'bot');
-      // Mostrar opciones de escalamiento
-      const escDiv = document.createElement('div');
-      escDiv.innerHTML = `
-        <div class="priv-msg bot">
-          <div class="priv-bubble" style="background:transparent;padding:0">
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap">
-              <a href="https://wa.me/34612345678" target="_blank" rel="noopener"
-                 style="flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;background:#25D366;color:#fff;padding:.55rem .85rem;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none">
-                📱 WhatsApp
-              </a>
-              <a href="index.html#contacto"
-                 style="flex:1;display:flex;align-items:center;justify-content:center;gap:.4rem;background:var(--navy);color:#fff;padding:.55rem .85rem;border-radius:8px;font-size:.8rem;font-weight:700;text-decoration:none">
-                ✉️ Formulario
-              </a>
-            </div>
-          </div>
-        </div>`;
-      messagesEl.appendChild(escDiv.firstElementChild);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      // Fallback contextual: muestra todas las opciones disponibles
+      addPrivMsg(buildContextualFallback(text), 'bot');
+      // Quick replies con los temas más comunes
+      setPrivQuickReplies([
+        '¿Cuánto provisionar?',
+        '¿Mi score de riesgo?',
+        '¿Mis vencimientos?',
+        '¿Mi facturación?',
+        '¿Alertas activas?',
+        'Hablar con mi asesora'
+      ]);
     }
   }
 
   // Mensaje de bienvenida
   setTimeout(() => {
-    addPrivMsg(`¡Hola! Soy tu asistente fiscal privado. Tengo acceso a los datos de **${MOCK_DATA.cliente.nombre}** en tiempo real.\n\n¿En qué te puedo ayudar hoy?`, 'bot');
-    setPrivQuickReplies(['¿Cuánto debo provisionar?', '¿Cuál es mi próximo vencimiento?', '¿Cómo está mi riesgo fiscal?', '¿Cuánto tengo proyectado a 60 días?']);
+    const c = D().cliente || MOCK_DATA.cliente;
+    addPrivMsg(`¡Hola! Soy tu asistente fiscal privado. Tengo acceso a los datos de **${c.nombre}** en tiempo real.\n\nPuedo consultar tus **reportes BI**: provisiones, vencimientos, riesgo fiscal, flujo de caja, facturación, alertas, pipeline ETL y más.\n\n¿En qué te puedo ayudar hoy?`, 'bot');
+    setPrivQuickReplies(['¿Cuánto debo provisionar?', '¿Cuál es mi próximo vencimiento?', '¿Cómo está mi riesgo fiscal?', '¿Mi facturación mensual?']);
   }, 400);
 
   inputEl.addEventListener('input', () => { sendBtn.disabled = !inputEl.value.trim(); });

@@ -420,49 +420,223 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
   /* ── Base de conocimiento FAQ ─────────────────────────── */
   const FAQ_KB = [
     {
-      keywords: ['régimen', 'tributario', 'conviene', 'mejor régimen', 'autónomo', 'sl', 'sociedad'],
+      id: 'regimen',
+      keywords: ['régimen', 'tributario', 'conviene', 'mejor régimen', 'autónomo', 'sl', 'sociedad', 'tipo empresa', 'cual me conviene', 'estructura'],
+      label: '📋 Régimen tributario',
       answer: `El régimen más adecuado depende de tu facturación, tipo de actividad y previsiones de crecimiento. En general:\n\n• **Estimación directa simplificada**: ideal para autónomos con facturación inferior a 600.000 €/año.\n• **Módulos (EOS)**: solo ciertos sectores con actividad predecible.\n• **Sociedad Limitada**: recomendable si facturas más de 60.000 €/año y quieres optimizar el IS vs. IRPF.\n\nHaz una **consulta gratuita** y te analizamos tu caso sin compromiso.`,
+      followUp: ['¿Cuánto cuesta?', '¿Qué incluye el plan?', 'Solicitar consulta'],
     },
     {
-      keywords: ['precio', 'coste', 'cuánto cuesta', 'tarifa', 'mensual', 'cuota'],
+      id: 'precio',
+      keywords: ['precio', 'coste', 'cuánto cuesta', 'tarifa', 'mensual', 'cuota', 'planes', 'plan', 'paquete', 'valor'],
+      label: '💰 Precios y planes',
       answer: `Nuestros planes:\n\n• **Consulta Puntual**: tarifa fija por sesión (diagnóstico + informe escrito).\n• **Asesoría Recurrente**: desde **149 €/mes** (autónomos con SL) / desde **249 €/mes** (PYMEs).\n• **Paquete Integral Anual**: incluye planificación estratégica, auditoría preventiva y soporte ilimitado.\n\nLa **primera consulta es gratuita**. ¿Quieres que te contactemos?`,
+      followUp: ['¿Qué incluye cada plan?', '¿Puedo cambiar de plan?', 'Solicitar consulta'],
     },
     {
-      keywords: ['atraso', 'deuda', 'hacienda', 'multa', 'sanción', 'requerimiento', 'inspección'],
+      id: 'deuda',
+      keywords: ['atraso', 'deuda', 'hacienda', 'multa', 'sanción', 'requerimiento', 'inspección', 'debo dinero', 'moroso', 'embargo'],
+      label: '⚠️ Deudas y sanciones',
       answer: `Si tienes atrasos o deudas con Hacienda, no entres en pánico. Existen vías de regularización:\n\n• **Regularización voluntaria**: reduce sanciones hasta un 50 %.\n• **Aplazamiento o fraccionamiento**: hasta 36 meses sin aval en importes menores.\n• **Recurso o revisión**: si crees que la sanción es injusta, tenemos un plazo legal para recurrir.\n\nCuanto antes actúes, más opciones tienes. **Escríbenos o llámanos hoy.**`,
+      followUp: ['¿Cuánto cuesta la asesoría?', 'Solicitar consulta gratuita', '¿Plazos fiscales?'],
     },
     {
-      keywords: ['plazo', 'vencimiento', 'cuándo', 'fechas', 'calendario', 'trimestre', '303', '111', 'modelo'],
+      id: 'plazos',
+      keywords: ['plazo', 'vencimiento', 'cuándo', 'fechas', 'calendario', 'trimestre', '303', '111', 'modelo', 'fecha limite', 'presentar'],
+      label: '📅 Plazos fiscales',
       answer: `Los principales vencimientos fiscales del año en España:\n\n• **Modelo 303 (IVA trimestral)**: 20 ene, 20 abr, 20 jul, 20 oct.\n• **Modelo 111 (retenciones IRPF)**: mismas fechas que el IVA.\n• **Modelo 200 (Impuesto Sociedades)**: 25 días tras los 6 meses del cierre contable.\n• **Modelo 100 (IRPF autónomos)**: 30 de junio del año siguiente.\n\nCon nuestra **asesoría recurrente** recibes alertas personalizadas antes de cada vencimiento.`,
+      followUp: ['¿Cuánto cuesta?', '¿Tengo una deuda?', 'Solicitar consulta'],
     },
     {
-      keywords: ['startup', 'inversión', 'ronda', 'stock option', 'i+d', 'investigación', 'deducción'],
+      id: 'startup',
+      keywords: ['startup', 'inversión', 'ronda', 'stock option', 'i+d', 'investigación', 'deducción', 'emprendimiento', 'seed', 'serie a'],
+      label: '🚀 Startups e inversión',
       answer: `Para startups tenemos experiencia específica en:\n\n• Estructuración fiscal para **rondas de financiación** (seed, Serie A…)\n• Planes de **stock options** para empleados clave (tributación diferida)\n• Deducciones por **I+D+i**: hasta el 25 % de la inversión en I+D.\n• **Precios de transferencia** en operaciones con filiales internacionales.\n\nContacta con Laura García, nuestra especialista en startups.`,
+      followUp: ['¿Cuánto cuesta?', '¿Qué régimen me conviene?', 'Solicitar consulta'],
     },
     {
-      keywords: ['importación', 'aduana', 'iva importación', 'manufactura', 'intracomunitario', 'exportación'],
+      id: 'importacion',
+      keywords: ['importación', 'aduana', 'iva importación', 'manufactura', 'intracomunitario', 'exportación', 'comercio exterior'],
+      label: '🌍 Comercio exterior',
       answer: `En comercio exterior y manufactura gestionamos:\n\n• **IVA de importación**: diferimiento, DUA y liquidación en frontera.\n• **Operaciones intracomunitarias**: Modelo 349, ROI, VIES.\n• **Aranceles**: clasificación arancelaria y optimización de origen.\n• **Exportaciones**: exención de IVA y documentación aduanera.\n\nMiguel Santos, nuestro especialista en comercio exterior, puede atenderte hoy.`,
+      followUp: ['¿Cuánto cuesta?', '¿Plazos fiscales?', 'Solicitar consulta'],
     },
     {
-      keywords: ['cambiar', 'escalar', 'plan', 'permanencia', 'cambio de plan', 'flexible'],
+      id: 'cambio_plan',
+      keywords: ['cambiar', 'escalar', 'plan', 'permanencia', 'cambio de plan', 'flexible', 'cancelar'],
+      label: '🔄 Cambio de plan',
       answer: `Sí, puedes cambiar de plan en cualquier momento **sin penalizaciones ni permanencias**. Revisamos tus necesidades cada 6 meses para asegurar que siempre tienes el plan adecuado a tu momento empresarial.`,
+      followUp: ['¿Cuáles son los planes?', 'Solicitar consulta', '¿Qué incluye el plan integral?'],
     },
     {
-      keywords: ['madrid', 'cobertura', 'online', 'remoto', 'digital', 'presencial', 'ubicación'],
+      id: 'ubicacion',
+      keywords: ['madrid', 'cobertura', 'online', 'remoto', 'digital', 'presencial', 'ubicación', 'oficina', 'dónde están', 'dirección'],
+      label: '📍 Ubicación y cobertura',
       answer: `Estamos en **C/ Serrano, 47 — Madrid**, con atención presencial L-J 9-18h, V 9-15h.\n\nEl **40 % de nuestros clientes** trabajan con nosotros 100 % en remoto (videollamada + plataforma digital). No importa dónde esté tu empresa.`,
+      followUp: ['¿Cuánto cuesta?', '¿Qué servicios ofrecen?', 'Solicitar consulta'],
     },
     {
-      keywords: ['hola', 'buenos días', 'buenas tardes', 'buenas', 'hey', 'saludos'],
-      answer: `¡Hola! Soy el asistente virtual de **Nexum Asesores**. Puedo ayudarte con:\n\n• Información sobre nuestros servicios y precios\n• Plazos y calendarios fiscales\n• Dudas generales sobre asesoría para PYMEs\n\n¿En qué puedo ayudarte hoy?`,
+      id: 'kyc_shield',
+      keywords: ['kyc', 'tax shield', 'blindaje', 'fraude', 'identidad', 'reniec', 'verificación', 'anti fraude', 'score riesgo'],
+      label: '🛡️ KYC Tax Shield',
+      answer: `Nuestro sistema **KYC Tax Shield** es una auditoría preventiva que protege tu empresa contra:\n\n• 🔍 **Facturas de identidades falsas** (DNIs inexistentes o fallecidos)\n• 🛡️ **Suplantación de representantes legales**\n• 📊 **Score de riesgo fiscal** con Machine Learning (XGBoost)\n• 📈 **Proyecciones de caja** con modelos Prophet\n\nCruzamos tus datos con la base **RENIEC** para blindarte contra el fraude fiscal.\n\n¿Quieres saber más? Solicita una demo gratuita.`,
+      followUp: ['¿Cuánto cuesta?', '¿Cómo funciona la verificación?', 'Solicitar demo'],
+    },
+    {
+      id: 'servicios',
+      keywords: ['servicio', 'servicios', 'qué hacen', 'qué ofrecen', 'en qué ayudan', 'actividades', 'portafolio'],
+      label: '📌 Nuestros servicios',
+      answer: `En **Nexum Asesores** ofrecemos:\n\n• 📋 **Asesoría fiscal recurrente**: declaraciones, contabilidad, planificación.\n• 🛡️ **KYC Tax Shield**: blindaje anti-fraude con datos RENIEC.\n• 📊 **Dashboard predictivo**: flujo de caja, score de riesgo, alertas.\n• 🔍 **Auditoría preventiva**: verificación de identidades y proveedores.\n• 📅 **Alertas de vencimientos**: notificaciones personalizadas.\n• 👩‍💼 **Asesor asignado**: acompañamiento personalizado.\n\n¿Qué tema te interesa más?`,
+      followUp: ['¿Cuánto cuesta?', '¿Qué es KYC Tax Shield?', 'Solicitar consulta'],
+    },
+    {
+      id: 'saludo',
+      keywords: ['hola', 'buenos días', 'buenas tardes', 'buenas', 'hey', 'saludos', 'buen dia', 'qué tal'],
+      answer: `¡Hola! Soy el asistente virtual de **Nexum Asesores**. Puedo ayudarte con:\n\n• 📋 Información sobre nuestros **servicios y precios**\n• 📅 **Plazos** y calendarios fiscales\n• 🛡️ **KYC Tax Shield** (blindaje anti-fraude)\n• ❓ Dudas generales sobre asesoría para PYMEs\n\n¿En qué puedo ayudarte hoy?`,
       isGreeting: true,
+      followUp: ['Precios y planes', 'Plazos fiscales', 'Tengo una deuda con Hacienda', '¿Qué es KYC Tax Shield?'],
+    },
+    {
+      id: 'gracias',
+      keywords: ['gracias', 'perfecto', 'genial', 'ok', 'entendido', 'vale', 'listo', 'muchas gracias'],
+      answer: `¡De nada! 😊 Estoy aquí para ayudarte.\n\n¿Hay algo más que quieras saber sobre nuestros servicios?`,
+      followUp: ['¿Cuánto cuesta?', '¿Plazos fiscales?', 'Solicitar consulta gratuita'],
+    },
+    {
+      id: 'ayuda',
+      keywords: ['ayuda', 'help', 'qué puedes hacer', 'opciones', 'menú', 'menu'],
+      answer: `Puedo ayudarte con estos temas:\n\n• 📋 Régimen tributario ideal\n• 💰 Precios y planes\n• ⚠️ Deudas con Hacienda\n• 📅 Plazos y vencimientos fiscales\n• 🚀 Startups e inversión\n• 🌍 Comercio exterior\n• 🔄 Cambio de plan\n• 📍 Ubicación y cobertura\n• 🛡️ KYC Tax Shield\n• 📌 Servicios generales\n\n💡 Escríbeme con tus propias palabras, te entiendo aunque no sea textual.`,
+      followUp: ['Precios', 'Plazos fiscales', 'KYC Tax Shield', 'Solicitar consulta'],
     },
   ];
 
   const DISCLAIMER = `\n\n_⚠️ Esta información es orientativa. Para decisiones fiscales formales, consulta con tu asesor asignado en Nexum._`;
 
-  const FALLBACK = `Lo siento, no tengo información suficiente para responder esa pregunta con precisión.\n\nPuedo conectarte con un asesor de Nexum que resolverá tu duda en detalle.\n\n¿Quieres que te contactemos?`;
+  /* ── Motor NLP mejorado: fuzzy matching ────────────────── */
+  function normalizeText(str) {
+    return str.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[¿¡?!.,;:]/g, '');
+  }
 
-  /* ── Inject HTML del chatbot ────────────────────────── */
+  function tokenizeText(str) {
+    return normalizeText(str).split(/\s+/).filter(w => w.length > 1);
+  }
+
+  function levenshteinDist(a, b) {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++)
+      for (let j = 1; j <= n; j++)
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] !== b[j - 1] ? 1 : 0)
+        );
+    return dp[m][n];
+  }
+
+  function fuzzyMatch(queryWord, keyword) {
+    if (keyword.includes(queryWord) || queryWord.includes(keyword)) return 1;
+    const maxDist = Math.max(1, Math.floor(keyword.length * 0.35));
+    return levenshteinDist(queryWord, keyword) <= maxDist ? 0.7 : 0;
+  }
+
+  /* ── Motor de búsqueda FAQ ────────────────────────────── */
+  function findAnswer(query) {
+    const qNorm = normalizeText(query);
+    const qTokens = tokenizeText(query);
+    let best = null, bestScore = 0;
+
+    FAQ_KB.forEach(entry => {
+      let score = 0;
+
+      // 1. Coincidencia exacta de frases (mayor peso)
+      entry.keywords.forEach(kw => {
+        const kwNorm = normalizeText(kw);
+        if (qNorm.includes(kwNorm)) {
+          score += 3 * kwNorm.split(/\s+/).length;
+        }
+      });
+
+      // 2. Fuzzy matching por tokens si no hubo match exacto
+      if (score === 0) {
+        entry.keywords.forEach(kw => {
+          const kwTokens = tokenizeText(kw);
+          kwTokens.forEach(kwt => {
+            qTokens.forEach(qt => {
+              const match = fuzzyMatch(qt, kwt);
+              if (match > 0) score += match;
+            });
+          });
+        });
+      }
+
+      if (score > bestScore) { best = entry; bestScore = score; }
+    });
+
+    return bestScore >= 0.7 ? best : null;
+  }
+
+  /* ── Fallback contextual: nunca deja al usuario sin opciones ── */
+  function buildFallback(query) {
+    const topics = FAQ_KB
+      .filter(e => !e.isGreeting && e.id !== 'gracias' && e.id !== 'ayuda' && e.label)
+      .map(e => `• ${e.label}`)
+      .join('\n');
+    return `No encontré una respuesta exacta, pero puedo ayudarte con estos temas:\n\n${topics}\n\n💡 Intenta reformular tu pregunta o elige una opción de arriba.\n\n¿Prefieres hablar directamente con un asesor? Podemos conectarte ahora.`;
+  }
+
+  /* ── Handle envío ─────────────────────────────────────── */
+  async function handleSend() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    sendBtn.disabled = true;
+    quickR.innerHTML = '';
+
+    addMessage(text, 'user');
+
+    const typing = showTyping();
+    await new Promise(r => setTimeout(r, 700 + Math.random() * 500));
+    typing.remove();
+
+    const match = findAnswer(text);
+
+    if (match) {
+      const answer = match.isGreeting ? match.answer : match.answer + DISCLAIMER;
+      addMessage(answer, 'bot');
+      setQuickReplies(match.followUp || ['¿Cuánto cuesta?', '¿Qué incluye el plan?', 'Solicitar consulta']);
+    } else {
+      // Fallback contextual: muestra todos los temas disponibles
+      addMessage(buildFallback(text), 'bot');
+      if (!escalated) {
+        escalated = true;
+        showEscalation();
+      }
+      setQuickReplies(['Precios y planes', 'Plazos fiscales', 'KYC Tax Shield', '¿Qué servicios ofrecen?', 'Solicitar consulta']);
+    }
+  }
+
+  function showEscalation() {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <div class="chat-escalate">
+        <p>¿Quieres hablar con un asesor ahora?</p>
+        <div class="chat-escalate-btns">
+          <a href="https://wa.me/34612345678?text=Hola,%20vengo%20del%20chat%20y%20necesito%20ayuda" target="_blank" rel="noopener" class="chat-escalate-btn wa">📱 WhatsApp</a>
+          <a href="#contacto" class="chat-escalate-btn form" id="chatEscForm">✉️ Formulario</a>
+        </div>
+      </div>`;
+    messages.appendChild(div.firstElementChild);
+    messages.scrollTop = messages.scrollHeight;
+
+    $('#chatEscForm')?.addEventListener('click', closeChat);
+  }
+
   const chatHTML = `
   <div id="chatbot-widget" aria-label="Asistente virtual de Nexum Asesores" role="complementary">
     <!-- Botón flotante -->
@@ -783,71 +957,7 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
     });
   }
 
-  /* ── Motor de búsqueda FAQ ────────────────────────────── */
-  function findAnswer(query) {
-    const q = query.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    let best = null, bestScore = 0;
 
-    FAQ_KB.forEach(entry => {
-      const score = entry.keywords.reduce((acc, kw) => {
-        const normalized = kw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-        return acc + (q.includes(normalized) ? 1 : 0);
-      }, 0);
-      if (score > bestScore) { best = entry; bestScore = score; }
-    });
-
-    return bestScore > 0 ? best : null;
-  }
-
-  /* ── Handle envío ─────────────────────────────────────── */
-  async function handleSend() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    input.value = '';
-    sendBtn.disabled = true;
-    quickR.innerHTML = '';
-
-    addMessage(text, 'user');
-
-    const typing = showTyping();
-    await new Promise(r => setTimeout(r, 900 + Math.random() * 600));
-    typing.remove();
-
-    const match = findAnswer(text);
-
-    if (match) {
-      const answer = match.isGreeting ? match.answer : match.answer + DISCLAIMER;
-      addMessage(answer, 'bot');
-      if (!match.isGreeting) {
-        setQuickReplies(['¿Cuánto cuesta?', '¿Qué incluye el plan?', 'Solicitar consulta']);
-      } else {
-        setQuickReplies(['Precios', 'Plazos fiscales', 'Tengo deudas con Hacienda', 'Startup y rondas']);
-      }
-    } else {
-      addMessage(FALLBACK, 'bot');
-      if (!escalated) {
-        escalated = true;
-        showEscalation();
-      }
-    }
-  }
-
-  function showEscalation() {
-    const div = document.createElement('div');
-    div.innerHTML = `
-      <div class="chat-escalate">
-        <p>¿Quieres hablar con un asesor ahora?</p>
-        <div class="chat-escalate-btns">
-          <a href="https://wa.me/34612345678?text=Hola,%20vengo%20del%20chat%20y%20necesito%20ayuda" target="_blank" rel="noopener" class="chat-escalate-btn wa">📱 WhatsApp</a>
-          <a href="#contacto" class="chat-escalate-btn form" id="chatEscForm">✉️ Formulario</a>
-        </div>
-      </div>`;
-    messages.appendChild(div.firstElementChild);
-    messages.scrollTop = messages.scrollHeight;
-
-    $('#chatEscForm')?.addEventListener('click', closeChat);
-  }
 
   /* ── Abrir / Cerrar ───────────────────────────────────── */
   function openChat() {
@@ -863,8 +973,8 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
 
     if (msgCount === 0) {
       setTimeout(() => {
-        addMessage('¡Hola! Soy el asistente virtual de **Nexum Asesores**. Puedo ayudarte con preguntas sobre nuestros servicios, precios y plazos fiscales.\n\n¿En qué puedo ayudarte?', 'bot');
-        setQuickReplies(['Precios y planes', 'Plazos fiscales', 'Tengo una deuda con Hacienda', 'Soy una startup']);
+        addMessage('¡Hola! Soy el asistente virtual de **Nexum Asesores**. Puedo ayudarte con:\n\n• 📋 Servicios y precios\n• 📅 Plazos fiscales\n• 🛡️ KYC Tax Shield (blindaje anti-fraude)\n• ❓ Dudas sobre asesoría para PYMEs\n\n¿En qué puedo ayudarte?', 'bot');
+        setQuickReplies(['Precios y planes', 'Plazos fiscales', 'KYC Tax Shield', 'Tengo una deuda con Hacienda']);
       }, 300);
     }
   }
