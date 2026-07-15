@@ -56,6 +56,7 @@ app.add_middleware(
         "https://portal.nexumasesores.es",
         "http://localhost:5500",   # desarrollo local
         "http://127.0.0.1:5500",
+        "https://proyecto-in-g9.vercel.app", # Vercel production
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
