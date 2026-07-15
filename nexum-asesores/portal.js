@@ -8,7 +8,7 @@
 // URL dinámica del backend (localhost para local, Render para producción)
 const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8000'
-  : 'https://g9-inteligencia-de-negocios.onrender.com';
+  : 'https://nexum-api-vsqw.onrender.com';
 
 /* ══════════════════════════════════════════════════════════
    MOCK DATA — Simula la capa Gold de PostgreSQL
