@@ -23,3 +23,7 @@ dist/
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Agents
+.agents/
+
