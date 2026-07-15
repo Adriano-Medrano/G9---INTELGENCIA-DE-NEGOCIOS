@@ -1,0 +1,132 @@
+﻿# ============================================================
+# routers/vencimientos.py ÔÇö Calendario de vencimientos
+# GET /vencimientos/{cliente_id}
+# GET /vencimientos/{cliente_id}/proximos?dias=30
+# ============================================================
+
+from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
+from typing import List, Optional
+from datetime import datetime, timedelta
+import logging
+import asyncpg
+
+from routers.auth import get_current_user, TokenData
+from db.connection import get_db_connection, set_rls_context
+
+router = APIRouter()
+logger = logging.getLogger("nexum.vencimientos")
+
+
+# ÔöÇÔöÇ Schemas ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+class Vencimiento(BaseModel):
+    id: str
+    modelo_fiscal: str          # "Modelo 303 ÔÇö IVA Q2"
+    descripcion: str
+    fecha_vencimiento: str      # ISO date
+    dias_restantes: int
+    importe_estimado: float
+    estado: str                 # "urgente" | "proximo" | "ok" | "completado"
+    caja_disponible_ese_dia: Optional[float]  # del modelo Prophet
+    margen_caja: Optional[float]              # diferencia
+    fecha_provision_recomendada: Optional[str]
+
+
+class VencimientosResponse(BaseModel):
+    cliente_id: str
+    total_urgente: int      # Ôëñ 7 d├¡as
+    total_proximo: int      # 8-30 d├¡as
+    importe_urgente: float
+    importe_proximo_30d: float
+    vencimientos: List[Vencimiento]
+
+
+# ÔöÇÔöÇ Endpoint principal ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+@router.get("/{cliente_id}", response_model=VencimientosResponse)
+async def get_vencimientos(
+    cliente_id: str,
+    dias: int = Query(default=90, ge=7, le=365, description="Horizonte en d├¡as"),
+    user: TokenData = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection),
+):
+    """
+    Devuelve todos los vencimientos fiscales del cliente en el
+    horizonte solicitado, enriquecidos con la caja proyectada de PostgreSQL.
+    """
+    if user.cliente_id != cliente_id:
+        raise HTTPException(403, "Acceso denegado.")
+
+    logger.info(f"Vencimientos solicitados: {cliente_id} | horizonte: {dias}d")
+
+    await set_rls_context(conn, cliente_id)
+
+    query = """
+        SELECT
+            d.declaracion_id AS id,
+            ti.nombre_completo AS modelo_fiscal,
+            ti.descripcion || ' (' || d.periodo || ')' AS descripcion,
+            dt.fecha AS fecha_vencimiento,
+            d.importe_estimado,
+            d.estado AS db_estado,
+            pc.yhat AS caja_disponible_ese_dia,
+            (pc.yhat - d.importe_estimado) AS margen_caja
+        FROM gold.fact_declaraciones d
+        JOIN gold.dim_tiempo dt        ON d.tiempo_key = dt.tiempo_key
+        JOIN gold.dim_tipo_impuesto ti ON d.impuesto_key = ti.impuesto_key
+        LEFT JOIN gold.fact_prediccion_caja pc ON pc.fecha_prediccion = dt.fecha
+        WHERE dt.fecha >= CURRENT_DATE - INTERVAL '3 months'
+          AND dt.fecha <= CURRENT_DATE + CAST($1 || ' days' AS INTERVAL)
+        ORDER BY dt.fecha ASC;
+    """
+    rows = await conn.fetch(query, str(dias))
+
+    vencimientos = []
+    today = datetime.today().date()
+
+    for r in rows:
+        fecha_venc = r['fecha_vencimiento']
+        dias_restantes = (fecha_venc - today).days
+        db_estado = r['db_estado']
+        importe = float(r['importe_estimado'])
+
+        # Determinar el estado l├│gico para el frontend
+        if db_estado == 'presentada':
+            estado = "completado"
+        elif dias_restantes < 0:
+            estado = "completado"  # Si ya pas├│ la fecha se considera completado
+        elif dias_restantes <= 7:
+            estado = "urgente"
+        elif dias_restantes <= 30:
+            estado = "proximo"
+        else:
+            estado = "ok"
+
+        # Fecha de provisi├│n recomendada (4 d├¡as antes)
+        fecha_provision = (fecha_venc - timedelta(days=4)).isoformat() if db_estado == 'pendiente' else None
+
+        vencimientos.append(
+            Vencimiento(
+                id=r['id'],
+                modelo_fiscal=r['modelo_fiscal'],
+                descripcion=r['descripcion'],
+                fecha_vencimiento=fecha_venc.isoformat(),
+                dias_restantes=max(0, dias_restantes),
+                importe_estimado=importe,
+                estado=estado,
+                caja_disponible_ese_dia=float(r['caja_disponible_ese_dia']) if r['caja_disponible_ese_dia'] is not None else None,
+                margen_caja=float(r['margen_caja']) if r['margen_caja'] is not None else None,
+                fecha_provision_recomendada=fecha_provision
+            )
+        )
+
+    urgentes = [v for v in vencimientos if v.estado == "urgente"]
+    proximos  = [v for v in vencimientos if v.estado == "proximo"]
+
+    return VencimientosResponse(
+        cliente_id=cliente_id,
+        total_urgente=len(urgentes),
+        total_proximo=len(proximos),
+        importe_urgente=sum(v.importe_estimado for v in urgentes),
+        importe_proximo_30d=sum(v.importe_estimado for v in proximos),
+        vencimientos=vencimientos,
+    )
