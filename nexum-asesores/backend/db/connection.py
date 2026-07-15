@@ -29,8 +29,23 @@ _pool: asyncpg.Pool | None = None
 async def init_pool():
     """Inicializa el pool de conexiones async al arrancar la app."""
     global _pool
+    
+    dsn = DB_URL_ASYNC.replace("postgresql+asyncpg://", "postgresql://")
+    
+    # Manejar el parámetro sslmode para evitar el error de asyncpg (bad query field: sslmode)
+    ssl_arg = None
+    if "sslmode=" in dsn:
+        if "sslmode=require" in dsn:
+            ssl_arg = True
+        # Limpiar el query param de la DSN
+        if "?" in dsn:
+            base, query = dsn.split("?", 1)
+            params = [p for p in query.split("&") if not p.startswith("sslmode=")]
+            dsn = base + ("?" + "&".join(params) if params else "")
+
     _pool = await asyncpg.create_pool(
-        dsn=DB_URL_ASYNC.replace("postgresql+asyncpg://", "postgresql://"),
+        dsn=dsn,
+        ssl=ssl_arg,
         min_size=2,
         max_size=10,
         command_timeout=30,
