@@ -111,7 +111,7 @@ async def login(
         SELECT u.password_hash, u.cliente_id, u.nombre, c.razon_social
         FROM silver.stg_usuarios u
         LEFT JOIN silver.stg_clientes c ON u.cliente_id = c.cliente_id
-        WHERE u.email = $1
+        WHERE LOWER(u.email) = LOWER($1)
     """
     user_row = await conn.fetchrow(query, body.email)
 
