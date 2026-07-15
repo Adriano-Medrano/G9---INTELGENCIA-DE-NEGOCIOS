@@ -421,16 +421,16 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
   const FAQ_KB = [
     {
       id: 'regimen',
-      keywords: ['régimen', 'tributario', 'conviene', 'mejor régimen', 'autónomo', 'sl', 'sociedad', 'tipo empresa', 'cual me conviene', 'estructura'],
+      keywords: ['régimen', 'tributario', 'conviene', 'mejor régimen', 'independiente', 'sl', 'sociedad', 'tipo empresa', 'cual me conviene', 'estructura'],
       label: '📋 Régimen tributario',
-      answer: `El régimen más adecuado depende de tu facturación, tipo de actividad y previsiones de crecimiento. En general:\n\n• **Estimación directa simplificada**: ideal para autónomos con facturación inferior a 600.000 €/año.\n• **Módulos (EOS)**: solo ciertos sectores con actividad predecible.\n• **Sociedad Limitada**: recomendable si facturas más de 60.000 €/año y quieres optimizar el IS vs. IRPF.\n\nHaz una **consulta gratuita** y te analizamos tu caso sin compromiso.`,
+      answer: `El régimen más adecuado depende de tu facturación, tipo de actividad y previsiones de crecimiento. En general:\n\n• **Estimación directa simplificada**: ideal para independientes / PYMEs con facturación inferior a 600.000 S//año.\n• **Módulos (EOS)**: solo ciertos sectores con actividad predecible.\n• **Sociedad Anónima Cerrada (S.A.C.)**: recomendable si facturas más de 60.000 S//año y quieres optimizar el IS vs. Impuesto a la Renta.\n\nHaz una **consulta gratuita** y te analizamos tu caso sin compromiso.`,
       followUp: ['¿Cuánto cuesta?', '¿Qué incluye el plan?', 'Solicitar consulta'],
     },
     {
       id: 'precio',
       keywords: ['precio', 'coste', 'cuánto cuesta', 'tarifa', 'mensual', 'cuota', 'planes', 'plan', 'paquete', 'valor'],
       label: '💰 Precios y planes',
-      answer: `Nuestros planes:\n\n• **Consulta Puntual**: tarifa fija por sesión (diagnóstico + informe escrito).\n• **Asesoría Recurrente**: desde **149 €/mes** (autónomos con SL) / desde **249 €/mes** (PYMEs).\n• **Paquete Integral Anual**: incluye planificación estratégica, auditoría preventiva y soporte ilimitado.\n\nLa **primera consulta es gratuita**. ¿Quieres que te contactemos?`,
+      answer: `Nuestros planes:\n\n• **Consulta Puntual**: tarifa fija por sesión (diagnóstico + informe escrito).\n• **Asesoría Recurrente**: desde **149 S//mes** (independientes con S.A.C.) / desde **249 S//mes** (PYMEs).\n• **Paquete Integral Anual**: incluye planificación estratégica, auditoría preventiva y soporte ilimitado.\n\nLa **primera consulta es gratuita**. ¿Quieres que te contactemos?`,
       followUp: ['¿Qué incluye cada plan?', '¿Puedo cambiar de plan?', 'Solicitar consulta'],
     },
     {
@@ -444,7 +444,7 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
       id: 'plazos',
       keywords: ['plazo', 'vencimiento', 'cuándo', 'fechas', 'calendario', 'trimestre', '303', '111', 'modelo', 'fecha limite', 'presentar'],
       label: '📅 Plazos fiscales',
-      answer: `Los principales vencimientos fiscales del año en España:\n\n• **Modelo 303 (IVA trimestral)**: 20 ene, 20 abr, 20 jul, 20 oct.\n• **Modelo 111 (retenciones IRPF)**: mismas fechas que el IVA.\n• **Modelo 200 (Impuesto Sociedades)**: 25 días tras los 6 meses del cierre contable.\n• **Modelo 100 (IRPF autónomos)**: 30 de junio del año siguiente.\n\nCon nuestra **asesoría recurrente** recibes alertas personalizadas antes de cada vencimiento.`,
+      answer: `Los principales vencimientos fiscales del año en Perú:\n\n• **PDT 621 (IGV Mensual)**: 20 ene, 20 abr, 20 jul, 20 oct.\n• **PDT 621 (IGV & Renta Mensual)**: mismas fechas que el IGV.\n• **PDT 710 (Renta Anual MYPE)**: 25 días tras los 6 meses del cierre contable.\n• **Modelo 100 (Renta de 4ta Categoría)**: 30 de junio del año siguiente.\n\nCon nuestra **asesoría recurrente** recibes alertas personalizadas antes de cada vencimiento.`,
       followUp: ['¿Cuánto cuesta?', '¿Tengo una deuda?', 'Solicitar consulta'],
     },
     {
@@ -458,7 +458,7 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
       id: 'importacion',
       keywords: ['importación', 'aduana', 'iva importación', 'manufactura', 'intracomunitario', 'exportación', 'comercio exterior'],
       label: '🌍 Comercio exterior',
-      answer: `En comercio exterior y manufactura gestionamos:\n\n• **IVA de importación**: diferimiento, DUA y liquidación en frontera.\n• **Operaciones intracomunitarias**: Modelo 349, ROI, VIES.\n• **Aranceles**: clasificación arancelaria y optimización de origen.\n• **Exportaciones**: exención de IVA y documentación aduanera.\n\nMiguel Santos, nuestro especialista en comercio exterior, puede atenderte hoy.`,
+      answer: `En comercio exterior y manufactura gestionamos:\n\n• **IGV de importación**: diferimiento, DUA y liquidación en frontera.\n• **Operaciones intracomunitarias**: PDT 3500 (Operaciones No Domiciliados), ROI, VIES.\n• **Aranceles**: clasificación arancelaria y optimización de origen.\n• **Exportaciones**: exención de IGV y documentación aduanera.\n\nMiguel Santos, nuestro especialista en comercio exterior, puede atenderte hoy.`,
       followUp: ['¿Cuánto cuesta?', '¿Plazos fiscales?', 'Solicitar consulta'],
     },
     {
@@ -627,7 +627,7 @@ const $$ = (sel, ctx = document) => [...ctx.querySelectorAll(sel)];
       <div class="chat-escalate">
         <p>¿Quieres hablar con un asesor ahora?</p>
         <div class="chat-escalate-btns">
-          <a href="https://wa.me/34612345678?text=Hola,%20vengo%20del%20chat%20y%20necesito%20ayuda" target="_blank" rel="noopener" class="chat-escalate-btn wa">📱 WhatsApp</a>
+          <a href="https://wa.me/51987654321?text=Hola,%20vengo%20del%20chat%20y%20necesito%20ayuda" target="_blank" rel="noopener" class="chat-escalate-btn wa">📱 WhatsApp</a>
           <a href="#contacto" class="chat-escalate-btn form" id="chatEscForm">✉️ Formulario</a>
         </div>
       </div>`;

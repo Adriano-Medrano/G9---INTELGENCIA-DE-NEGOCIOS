@@ -86,7 +86,7 @@ def train(
     if use_regressors:
         df = add_regressors(df, vencimientos)
 
-    # Modelo Prophet con estacionalidad fiscal española
+    # Modelo Prophet con estacionalidad fiscal peruana
     model = Prophet(
         yearly_seasonality=True,
         weekly_seasonality=True,
@@ -96,20 +96,20 @@ def train(
         changepoint_prior_scale=0.05,      # regularización de cambios de tendencia
     )
 
-    # Estacionalidad trimestral fiscal (IVA, IRPF)
+    # Estacionalidad trimestral fiscal (IGV, Impuesto a la Renta)
     model.add_seasonality(
         name="trimestral_fiscal",
         period=91.25,
         fourier_order=5,
     )
 
-    # Festivos España
+    # Festivos Perú
     try:
         from prophet.make_holidays import make_holidays_df
         holidays_es = make_holidays_df(year_list=list(range(2020, 2031)), country="ES")
         model.add_country_holidays(country_name="ES")
     except Exception:
-        logger.warning("No se pudieron cargar festivos de España — Prophet continuará sin ellos")
+        logger.warning("No se pudieron cargar festivos de Perú — Prophet continuará sin ellos")
 
     # Regresores externos
     if use_regressors:
@@ -131,7 +131,7 @@ def train(
         mae  = float(pm["mae"].mean())
         rmse = float(pm["rmse"].mean())
         mape = float(pm["mape"].mean()) * 100  # %
-        logger.info(f"CV: MAE={mae:.0f}€ | RMSE={rmse:.0f}€ | MAPE={mape:.1f}%")
+        logger.info(f"CV: MAE={mae:.0f}S/ | RMSE={rmse:.0f}S/ | MAPE={mape:.1f}%")
     except Exception as e:
         logger.warning(f"CV no disponible (datos insuficientes): {e}")
         mae, rmse, mape = None, None, None
@@ -205,9 +205,9 @@ def predict(
 
     logger.info(
         f"Predicción generada: {cliente_id} | {len(result)} días | "
-        f"[30d={result.iloc[29]['yhat']:.0f}€ | "
-        f"60d={result.iloc[59]['yhat']:.0f}€ | "
-        f"90d={result.iloc[89]['yhat']:.0f}€]" if len(result) >= 90 else ""
+        f"[30d={result.iloc[29]['yhat']:.0f}S/ | "
+        f"60d={result.iloc[59]['yhat']:.0f}S/ | "
+        f"90d={result.iloc[89]['yhat']:.0f}S/]" if len(result) >= 90 else ""
     )
 
     return result.reset_index(drop=True)
@@ -252,9 +252,9 @@ def generar_alertas_provision(
             "fecha_provision_recomendada": fecha_prov.date().isoformat(),
             "alerta":                    alerta,
             "mensaje": (
-                f"⚠️ Margen ajustado ({margen:.0f}€). Provisionar {importe:.0f}€ antes del {fecha_prov.date()}"
+                f"⚠️ Margen ajustado ({margen:.0f}S/). Provisionar {importe:.0f}S/ antes del {fecha_prov.date()}"
                 if alerta else
-                f"✅ Caja suficiente ({caja_ese_dia:.0f}€ disponibles)"
+                f"✅ Caja suficiente ({caja_ese_dia:.0f}S/ disponibles)"
             ) if caja_ese_dia else "ℹ️ Sin datos de caja para esta fecha",
         })
 
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     venc_demo = pd.DataFrame({
         "fecha":            pd.to_datetime(["2026-07-20", "2026-10-20"]),
         "importe":          [5930, 7240],
-        "modelo":           ["Varios modelos julio", "IVA Q3"],
+        "modelo":           ["Varios modelos julio", "IGV Q3"],
         "importe_estimado": [5930, 7240],
     })
 

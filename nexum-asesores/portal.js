@@ -44,7 +44,7 @@ const MOCK_DATA = {
     },
     features: [
       { name: 'Días promedio atraso', importancia: 38, valor: '2.3 días', estado: 'good' },
-      { name: 'Inconsistencias IVA/IRPF', importancia: 25, valor: '0.04 ratio', estado: 'good' },
+      { name: 'Inconsistencias IGV/Impuesto a la Renta', importancia: 25, valor: '0.04 ratio', estado: 'good' },
       { name: 'Facturas contraparte fallecida', importancia: 72, valor: '1 (detectada)', estado: 'bad' },
       { name: 'Identidades inválidas en padrón', importancia: 65, valor: '0.0% de facturas', estado: 'good' },
       { name: 'Desviación de ubigeo fiscal', importancia: 30, valor: '15% de compras', estado: 'warn' },
@@ -53,13 +53,13 @@ const MOCK_DATA = {
   },
 
   vencimientos: [
-    { modelo: 'Modelo 111 — IRPF Retenciones', desc: 'Retenciones trabajadores Q2', fecha: '20 jul 2026', diasRestantes: 6,  importe: 3840, tipo: 'urgente' },
-    { modelo: 'Modelo 130 — IRPF fraccionado', desc: 'Pago fraccionado Q2 2026',   fecha: '20 jul 2026', diasRestantes: 6,  importe: 1200, tipo: 'urgente' },
-    { modelo: 'Modelo 303 — IVA Q3',           desc: 'IVA tercer trimestre 2026',  fecha: '20 oct 2026', diasRestantes: 98, importe: 7240, tipo: 'ok' },
-    { modelo: 'Modelo 115 — Alquiler',          desc: 'Retención alquiler Q2',      fecha: '20 jul 2026', diasRestantes: 6,  importe: 890,  tipo: 'proximo' },
-    { modelo: 'Modelo 200 — IS',                desc: 'Impuesto Sociedades 2025',   fecha: '25 jul 2026', diasRestantes: 11, importe: 12400, tipo: 'proximo' },
-    { modelo: 'Modelo 303 — IVA Q2',            desc: 'IVA segundo trimestre',       fecha: '20 abr 2026', diasRestantes: 0,  importe: 6840, tipo: 'completado' },
-    { modelo: 'Modelo 111 — IRPF Q1',           desc: 'Retenciones Q1 2026',         fecha: '20 ene 2026', diasRestantes: 0,  importe: 3210, tipo: 'completado' },
+    { modelo: 'PDT 621 — IGV & Renta Mensual', desc: 'Retenciones trabajadores Q2', fecha: '20 jul 2026', diasRestantes: 6,  importe: 3840, tipo: 'urgente' },
+    { modelo: 'PDT 621 — Renta fraccionada', desc: 'Pago a cuenta de Renta mensual',   fecha: '20 jul 2026', diasRestantes: 6,  importe: 1200, tipo: 'urgente' },
+    { modelo: 'PDT 621 — IGV Mensual',           desc: 'IGV tercer trimestre 2026',  fecha: '20 oct 2026', diasRestantes: 98, importe: 7240, tipo: 'ok' },
+    { modelo: 'PDT 1683 — Renta de 1ra (Alquileres)',          desc: 'Retención alquiler Q2',      fecha: '20 jul 2026', diasRestantes: 6,  importe: 890,  tipo: 'proximo' },
+    { modelo: 'PDT 710 — Renta Anual MYPE',                desc: 'Impuesto a la Renta MYPE 2025',   fecha: '25 jul 2026', diasRestantes: 11, importe: 12400, tipo: 'proximo' },
+    { modelo: 'PDT 621 — IGV Q2',            desc: 'IGV segundo trimestre',       fecha: '20 abr 2026', diasRestantes: 0,  importe: 6840, tipo: 'completado' },
+    { modelo: 'PDT 621 — Impuesto a la Renta Q1',           desc: 'Retenciones Q1 2026',         fecha: '20 ene 2026', diasRestantes: 0,  importe: 3210, tipo: 'completado' },
   ],
 
   facturacion: {
@@ -68,9 +68,9 @@ const MOCK_DATA = {
   },
 
   alertas: [
-    { tipo: 'danger',  titulo: 'Vencimiento urgente: Modelo 111 en 6 días', desc: 'El 20 de julio vence el Modelo 111 (retenciones IRPF Q2). Importe estimado: 3.840€. Tu caja proyectada cubre el pago, pero te recomendamos reservar los fondos hoy.', fecha: 'Hoy, 11:00' },
-    { tipo: 'danger',  titulo: 'Vencimiento urgente: Modelo 115 en 6 días', desc: 'Retención de alquiler Q2: 890€. Vence el 20 de julio junto al Modelo 111. Ambos pagos suman 4.730€.', fecha: 'Hoy, 11:00' },
-    { tipo: 'warning', titulo: 'Impuesto de Sociedades: provisionar 12.400€ antes del 25 jul', desc: 'Tu cuota del IS 2025 asciende a 12.400€. El modelo de flujo de caja detecta que tu saldo proyectado podría bajar de 20.000€ en agosto si no provisiones antes del día 18.', fecha: 'Hoy, 09:15' },
+    { tipo: 'danger',  titulo: 'Vencimiento urgente: PDT 621 en 6 días', desc: 'El 20 de julio vence el PDT 621 (IGV & Renta Mensual). Importe estimado: 3.840S/. Tu caja proyectada cubre el pago, pero te recomendamos reservar los fondos hoy.', fecha: 'Hoy, 11:00' },
+    { tipo: 'danger',  titulo: 'Vencimiento urgente: PDT 1683 en 6 días', desc: 'Retención de Alquiler (PDT 1683): 890S/. Vence el 20 de julio junto al PDT 621. Ambos pagos suman 4.730S/.', fecha: 'Hoy, 11:00' },
+    { tipo: 'warning', titulo: 'Impuesto a la Renta Anual: provisionar 12.400S/ antes del 25 jul', desc: 'Tu cuota del Renta Anual 2025 asciende a 12.400S/. El modelo de flujo de caja detecta que tu saldo proyectado podría bajar de 20.000S/ en agosto si no provisiones antes del día 18.', fecha: 'Hoy, 09:15' },
     { tipo: 'warning', titulo: 'Variación de facturación: −12.3% vs. Q1', desc: 'El modelo predictivo detectó una caída trimestral en tu facturación. Si la tendencia continúa, el score de riesgo podría subir 6-10 puntos en el próximo cálculo.', fecha: 'Lun 14 jul' },
     { tipo: 'info',    titulo: 'Plan fiscal Q3-Q4 2026 disponible', desc: 'Laura García (tu asesora) ha publicado el plan fiscal para el segundo semestre. Incluye oportunidades de deducción y optimización de pagos fraccionados.', fecha: 'Lun 14 jul' },
     { tipo: 'info',    titulo: 'Modelo reentrenado: sin drift detectado', desc: 'El retrain semanal de ambos modelos (XGBoost y Prophet) se completó con éxito. No se detectó drift de datos. Métricas estables dentro del umbral aceptable.', fecha: 'Lun 14 jul, 05:25' },
@@ -318,14 +318,14 @@ function buildAlertsList(vencData, riesgoData) {
         list.push({
           tipo: 'danger',
           titulo: `Vencimiento urgente: ${v.modelo_fiscal} en ${v.dias_restantes} días`,
-          desc: `El ${formatDate(v.fecha_vencimiento)} vence el ${v.modelo_fiscal}. Importe estimado: ${v.importe_estimado.toLocaleString('es-ES')}€.`,
+          desc: `El ${formatDate(v.fecha_vencimiento)} vence el ${v.modelo_fiscal}. Importe estimado: ${v.importe_estimado.toLocaleString('es-ES')}S/.`,
           fecha: 'Hoy'
         });
       } else if (v.estado === 'proximo') {
         list.push({
           tipo: 'warning',
-          titulo: `Impuesto próximo: provisionar ${v.importe_estimado.toLocaleString('es-ES')}€ antes del ${formatDate(v.fecha_vencimiento)}`,
-          desc: `Tu cuota estimada es ${v.importe_estimado.toLocaleString('es-ES')}€. Recomendamos provisionar fondos antes de la fecha límite para evitar tensiones de caja.`,
+          titulo: `Impuesto próximo: provisionar ${v.importe_estimado.toLocaleString('es-ES')}S/ antes del ${formatDate(v.fecha_vencimiento)}`,
+          desc: `Tu cuota estimada es ${v.importe_estimado.toLocaleString('es-ES')}S/. Recomendamos provisionar fondos antes de la fecha límite para evitar tensiones de caja.`,
           fecha: 'Hoy'
         });
       }
@@ -599,7 +599,7 @@ function renderFlujoCajaChart(period = 30) {
         legend: { display: false },
         tooltip: {
           callbacks: {
-            label: ctx => ctx.dataset.label + ': ' + (ctx.raw !== null ? '€' + ctx.raw.toLocaleString('es-ES') : 'n/a'),
+            label: ctx => ctx.dataset.label + ': ' + (ctx.raw !== null ? 'S/' + ctx.raw.toLocaleString('es-ES') : 'n/a'),
           },
         },
       },
@@ -607,7 +607,7 @@ function renderFlujoCajaChart(period = 30) {
         x: { grid: { color: CHART_DEFAULTS.gridColor } },
         y: {
           grid: { color: CHART_DEFAULTS.gridColor },
-          ticks: { callback: v => '€' + (v / 1000).toFixed(0) + 'k' },
+          ticks: { callback: v => 'S/' + (v / 1000).toFixed(0) + 'k' },
         },
       },
     },
@@ -666,10 +666,10 @@ function renderFacturacionChart() {
     },
     options: {
       responsive: true,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '€' + c.raw.toLocaleString('es-ES') } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'S/' + c.raw.toLocaleString('es-ES') } } },
       scales: {
         x: { grid: { display: false } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' } },
+        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => 'S/' + (v/1000).toFixed(0) + 'k' } },
       },
     },
   });
@@ -685,7 +685,7 @@ function renderVencimientosChart() {
     data: {
       labels: venc.map(v => v.modelo.split('—')[0].trim()),
       datasets: [{
-        label: 'Importe (€)',
+        label: 'Importe (S/)',
         data: venc.map(v => v.importe),
         backgroundColor: venc.map(v =>
           v.tipo === 'urgente' ? 'rgba(220,38,38,.75)' :
@@ -699,9 +699,9 @@ function renderVencimientosChart() {
     options: {
       indexAxis: 'y',
       responsive: true,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '€' + c.raw.toLocaleString('es-ES') } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => 'S/' + c.raw.toLocaleString('es-ES') } } },
       scales: {
-        x: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' } },
+        x: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => 'S/' + (v/1000).toFixed(0) + 'k' } },
         y: { grid: { display: false }, ticks: { font: { size: 11 } } },
       },
     },
@@ -766,11 +766,11 @@ function renderFlujoDetalleChart() {
       interaction: { mode: 'index', intersect: false },
       plugins: {
         legend: { position: 'top', labels: { filter: i => i.text !== 'Banda superior' && i.text !== 'Banda inferior', boxWidth: 14 } },
-        tooltip: { callbacks: { label: c => c.dataset.label + ': €' + (c.raw?.toLocaleString('es-ES') ?? 'n/a') } },
+        tooltip: { callbacks: { label: c => c.dataset.label + ': S/' + (c.raw?.toLocaleString('es-ES') ?? 'n/a') } },
       },
       scales: {
         x: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { font: { size: 10 } } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' } },
+        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => 'S/' + (v/1000).toFixed(0) + 'k' } },
       },
     },
   });
@@ -795,7 +795,7 @@ function renderComponentesChart() {
       plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
       scales: {
         x: { grid: { color: CHART_DEFAULTS.gridColor } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' } },
+        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => 'S/' + (v/1000).toFixed(0) + 'k' } },
       },
     },
   });
@@ -825,10 +825,10 @@ function renderPrediccionChart() {
     options: {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': €' + c.raw.toLocaleString('es-ES') } } },
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => c.dataset.label + ': S/' + c.raw.toLocaleString('es-ES') } } },
       scales: {
         x: { grid: { color: CHART_DEFAULTS.gridColor } },
-        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => '€' + (v/1000).toFixed(0) + 'k' } },
+        y: { grid: { color: CHART_DEFAULTS.gridColor }, ticks: { callback: v => 'S/' + (v/1000).toFixed(0) + 'k' } },
       },
     },
   });
@@ -914,7 +914,7 @@ function renderVencimientos() {
         <div class="v-fecha">Vence: ${escHtml(v.fecha)}</div>
       </div>
       <div class="v-importe">
-        <div class="v-monto">€${v.importe.toLocaleString('es-ES')}</div>
+        <div class="v-monto">S/${v.importe.toLocaleString('es-ES')}</div>
         <div class="v-monto-label">estimado</div>
       </div>
       <span class="v-status status-${v.tipo}">
@@ -1025,14 +1025,14 @@ function renderProvisionAlerts() {
   if (DATA.flujoCaja && DATA.flujoCaja.alertas_provision && DATA.flujoCaja.alertas_provision.length > 0) {
     alerts = DATA.flujoCaja.alertas_provision.map(ap => ({
       titulo: `Provisionar ${ap.vencimiento}`,
-      desc: `Reservar €${ap.importe_estimado.toLocaleString('es-ES')} antes del ${formatDate(ap.fecha_provision_recomendada)}`,
+      desc: `Reservar S/${ap.importe_estimado.toLocaleString('es-ES')} antes del ${formatDate(ap.fecha_provision_recomendada)}`,
       urgency: ap.alerta ? 'danger' : 'info'
     }));
   } else {
     alerts = [
-      { titulo: 'Provisionar Modelo 111 + 115', desc: 'Reservar €4.730 antes del 18 julio', urgency: 'danger' },
-      { titulo: 'Provisionar IS 2025',          desc: 'Reservar €12.400 antes del 22 julio para cubrir el día 25', urgency: 'warning' },
-      { titulo: 'Provisionar IVA Q3',           desc: 'Objetivo: €7.240 antes del 10 octubre (2 semanas antes)', urgency: 'info' },
+      { titulo: 'Provisionar PDT 621 + 115', desc: 'Reservar S/4.730 antes del 18 julio', urgency: 'danger' },
+      { titulo: 'Provisionar Renta Anual 2025',          desc: 'Reservar S/12.400 antes del 22 julio para cubrir el día 25', urgency: 'warning' },
+      { titulo: 'Provisionar IGV Q3',           desc: 'Objetivo: S/7.240 antes del 10 octubre (2 semanas antes)', urgency: 'info' },
     ];
   }
 
@@ -1047,7 +1047,7 @@ function renderProvisionAlerts() {
 }
 
 /* ══════════════════════════════════════════════════════════
-   7. CHATBOT PRIVADO (Capa 2 — autenticado)
+   7. CHATBOT PRIGVDO (Capa 2 — autenticado)
    Motor NLP mejorado: fuzzy matching + respuestas dinámicas
    desde DATA (reportes BI) + fallback contextual inteligente
    ══════════════════════════════════════════════════════════ */
@@ -1092,12 +1092,12 @@ function initPrivateChatbot() {
   /* ── Helpers de datos BI (lee de DATA o MOCK_DATA como fallback) ── */
   const D = () => (Object.keys(DATA).length > 0 ? DATA : MOCK_DATA);
 
-  const fmt = (n) => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 });
+  const fmt = (n) => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'PEN', minimumFractionDigits: 0 });
 
   const DISCLAIMER = '\n\n<span class="disclaimer-note">ℹ️ Orientativo. Consulta con tu asesor para decisiones formales.</span>';
 
   /* ── Intents: cada uno conectado a los datos BI del dashboard ── */
-  const PRIVATE_INTENTS = [
+  const PRIGVTE_INTENTS = [
     {
       id: 'provisionar',
       keywords: ['provisionar', 'provisión', 'cuánto debo', 'reservar', 'apartar', 'fondos', 'separar', 'guardar dinero', 'cuanto pagar'],
@@ -1162,7 +1162,7 @@ function initPrivateChatbot() {
         const p30 = fc.proyeccion_30d || 24800;
         const p60 = fc.proyeccion_60d || 18200;
         const p90 = fc.proyeccion_90d || 9100;
-        const alertaP90 = p90 < 10000 ? '\n\n⚠️ **Alerta**: Tu caja proyectada a 90 días es inferior a €10.000. Revisa los vencimientos de octubre y anticipa la provisión.' : '';
+        const alertaP90 = p90 < 10000 ? '\n\n⚠️ **Alerta**: Tu caja proyectada a 90 días es inferior a S/10.000. Revisa los vencimientos de octubre y anticipa la provisión.' : '';
         return `**Proyección de flujo de caja** (modelo Prophet):\n\n• 📍 Hoy: **${fmt(saldo)}** (saldo actual)\n• 📅 En 30 días: **${fmt(p30)}**\n• 📅 En 60 días: **${fmt(p60)}**\n• 📅 En 90 días: **${fmt(p90)}** ${p90 < 10000 ? '⚠️' : '✅'}${alertaP90}${DISCLAIMER}`;
       },
       followUp: ['¿Cuánto debo provisionar?', '¿Mi score de riesgo?', '¿Mis vencimientos próximos?'],
@@ -1288,7 +1288,7 @@ function initPrivateChatbot() {
       answer() {
         const d = D();
         const c = d.cliente || MOCK_DATA.cliente;
-        return `Tu asesora asignada es **${c.asesor || 'Laura García'}** — Especialista Fiscal Senior.\n\nPuedes contactarla:\n• **Email**: laura.garcia@nexumasesores.es\n• **WhatsApp**: +34 612 345 678\n• **Horario**: L-J 9-18h, V 9-15h\n\n[Escribir por WhatsApp](https://wa.me/34612345678)`;
+        return `Tu asesora asignada es **${c.asesor || 'Laura García'}** — Especialista Fiscal Senior.\n\nPuedes contactarla:\n• **Email**: laura.garcia@nexumasesores.pe\n• **WhatsApp**: +51 987 654 321\n• **Horario**: L-J 9-18h, V 9-15h\n\n[Escribir por WhatsApp](https://wa.me/51987654321)`;
       },
       followUp: ['¿Mis vencimientos?', '¿Mi score de riesgo?', '¿Cuánto provisionar?'],
     },
@@ -1362,7 +1362,7 @@ function initPrivateChatbot() {
     const qTokens = tokenize(query);
     let best = null, bestScore = 0;
 
-    PRIVATE_INTENTS.forEach(intent => {
+    PRIGVTE_INTENTS.forEach(intent => {
       let score = 0;
 
       // 1. Coincidencia exacta de frases keyword (mayor peso)
@@ -1449,7 +1449,7 @@ function initPrivateChatbot() {
 
   /* ── Fallback contextual: nunca deja al usuario sin opciones ── */
   function buildContextualFallback(query) {
-    const topics = PRIVATE_INTENTS
+    const topics = PRIGVTE_INTENTS
       .filter(i => !i.isGreeting && i.id !== 'gracias' && i.id !== 'ayuda')
       .map(i => `• ${i.label}`)
       .join('\n');

@@ -52,8 +52,8 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://www.nexumasesores.es",
-        "https://portal.nexumasesores.es",
+        "https://www.nexumasesores.pe",
+        "https://portal.nexumasesores.pe",
         "http://localhost:5500",   # desarrollo local
         "http://127.0.0.1:5500",
         "https://proyecto-in-g9.vercel.app", # Vercel production

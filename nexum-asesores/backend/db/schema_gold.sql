@@ -79,14 +79,14 @@ CREATE TABLE IF NOT EXISTS gold.dim_tipo_impuesto (
 -- Catálogo base de modelos AEAT
 INSERT INTO gold.dim_tipo_impuesto (codigo_modelo, nombre_completo, periodicidad, fecha_vencimiento_tipica)
 VALUES
-    ('303',  'IVA — Autoliquidación trimestral',           'trimestral', '20 ene/abr/jul/oct'),
-    ('111',  'IRPF — Retenciones e ingresos a cuenta',     'trimestral', '20 ene/abr/jul/oct'),
+    ('303',  'IGV — Autoliquidación trimestral',           'trimestral', '20 ene/abr/jul/oct'),
+    ('111',  'Impuesto a la Renta — Retenciones e ingresos a cuenta',     'trimestral', '20 ene/abr/jul/oct'),
     ('115',  'Retenciones arrendamiento inmueble',          'trimestral', '20 ene/abr/jul/oct'),
-    ('130',  'IRPF — Pago fraccionado (estimación directa)','trimestral', '20 ene/abr/jul/oct'),
+    ('130',  'Impuesto a la Renta — Pago fraccionado (estimación directa)','trimestral', '20 ene/abr/jul/oct'),
     ('200',  'Impuesto sobre Sociedades',                   'anual',      '25 días tras 6 meses del cierre'),
     ('349',  'Declaración recapitulativa operaciones intracomunitarias', 'mensual/trimestral', 'Último día del mes siguiente'),
-    ('390',  'IVA — Resumen anual',                        'anual',      '30 enero año siguiente'),
-    ('100',  'IRPF — Declaración anual (autónomos SL)',    'anual',      '30 junio año siguiente')
+    ('390',  'IGV — Resumen anual',                        'anual',      '30 enero año siguiente'),
+    ('100',  'Impuesto a la Renta — Declaración anual (independientes / PYMEs SL)',    'anual',      '30 junio año siguiente')
 ON CONFLICT (codigo_modelo) DO NOTHING;
 
 
@@ -304,7 +304,7 @@ ON CONFLICT (cliente_id) DO NOTHING;
 
 -- 2. Insertar usuario para la demo
 INSERT INTO silver.stg_usuarios (email, password_hash, cliente_id, nombre)
-VALUES ('demo@pyme.es', '$2b$12$t6WUEMmwp52pgMINh.91guEJStaeyZrkMC2MvsRot5MgCj0Nfcu0a', 'CL-2024-0042', 'Tecnopyme SL')
+VALUES ('demo@pyme.pe', '$2b$12$t6WUEMmwp52pgMINh.91guEJStaeyZrkMC2MvsRot5MgCj0Nfcu0a', 'CL-2024-0042', 'Tecnopyme SL')
 ON CONFLICT (email) DO NOTHING;
 
 -- 3. Insertar padrón de ciudadanos (RENIEC) en silver
@@ -382,7 +382,7 @@ FROM gold.fact_score_riesgo sr
 CROSS JOIN (
     VALUES
         ('Días promedio atraso',         0.12, 38.0, '2.3 días',         'ok'),
-        ('Inconsistencias IVA/IRPF',     0.05, 25.0, '0.04 ratio',        'ok'),
+        ('Inconsistencias IGV/Impuesto a la Renta',     0.05, 25.0, '0.04 ratio',        'ok'),
         ('Facturas contraparte fallecida', 0.45, 72.0, '1 (detectada)',   'bad'),
         ('Identidades inválidas en padrón',0.00, 65.0, '0.0% de facturas', 'ok'),
         ('Desviación de ubigeo fiscal',   0.15, 30.0, '15% de compras',   'warn'),
