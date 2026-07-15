@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal Cliente — Nexum Asesores</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="stylesheet" href="portal.css" />
+  <!-- Chart.js CDN — única dependencia externa, ~60kb gzipped -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+  <script src="portal.js" defer></script>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════
+     LOGIN SCREEN
+════════════════════════════════════════════ -->
+<div class="login-screen" id="loginScreen" role="main" aria-label="Inicio de sesión del portal de clientes">
+  <div class="login-card">
+    <div class="login-logo" aria-hidden="true">
+      <div style="display:flex;align-items:center;justify-content:center;gap:.6rem">
+        <div style="width:40px;height:40px;background:#0A1628;border-radius:10px;display:flex;align-items:center;justify-content:center">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#C9A84C" stroke-width="2" style="width:22px;height:22px">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:800;color:#0A1628;">Nexum</div>
+          <div style="font-size:.6rem;color:#C9A84C;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Asesores Fiscales</div>
+        </div>
+      </div>
+    </div>
+
+    <h1 class="login-title">Portal de Cliente</h1>
+    <p class="login-sub">Accede a tu dashboard fiscal en tiempo real</p>
+
+    <form class="login-form" id="loginForm" novalidate>
+      <div>
+        <label class="login-label" for="loginEmail">Email corporativo</label>
+        <input class="login-input" type="email" id="loginEmail" name="email"
+          placeholder="tu@empresa.es" autocomplete="email" required />
+      </div>
+      <div>
+        <label class="login-label" for="loginPass">Contraseña</label>
+        <input class="login-input" type="password" id="loginPass" name="password"
+          placeholder="••••••••" autocomplete="current-password" required />
+      </div>
+      <p class="login-error" id="loginError" role="alert">Credenciales incorrectas. Inténtalo de nuevo.</p>
+      <button type="submit" class="login-btn" id="loginBtn">Acceder al portal</button>
+    </form>
+
+    <p class="login-hint">
+      <strong>Demo:</strong> usa <code>demo@pyme.es</code> / <code>nexum2026</code>
+    </p>
+    <a href="index.html" class="login-back">← Volver al sitio web</a>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     OVERLAY MOBILE SIDEBAR
+════════════════════════════════════════════ -->
+<div class="sidebar-overlay" id="sidebarOverlay" aria-hidden="true"></div>
+
+
+<!-- ════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════ -->
+<aside class="portal-sidebar" id="portalSidebar" role="navigation" aria-label="Navegación del portal">
+  <a href="index.html" class="sidebar-logo" aria-label="Nexum Asesores — Volver al sitio principal">
+    <div class="sidebar-logo-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    </div>
+    <div class="sidebar-logo-text">
+      <div class="sidebar-logo-name">Nexum</div>
+      <div class="sidebar-logo-sub">Portal Cliente</div>
+    </div>
+  </a>
+
+  <div class="sidebar-client-info">
+    <div class="client-avatar" id="clientAvatar" aria-hidden="true">T</div>
+    <div>
+      <div class="client-name" id="clientName">Tecnopyme SL</div>
+      <div class="client-plan">Plan Asesoría Recurrente</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav" aria-label="Secciones del portal">
+    <div class="nav-section-label">Principal</div>
+    <button class="sidebar-link active" data-section="dashboard" aria-current="page" id="nav-dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </button>
+    <button class="sidebar-link" data-section="vencimientos" id="nav-vencimientos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Vencimientos
+      <span class="sidebar-badge" aria-label="2 vencimientos urgentes">2</span>
+    </button>
+    <button class="sidebar-link" data-section="flujo" id="nav-flujo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Flujo de Caja
+    </button>
+    <button class="sidebar-link" data-section="riesgo" id="nav-riesgo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      KYC & Tax Shield
+    </button>
+    <button class="sidebar-link" data-section="prediccion" id="nav-prediccion">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Modelo Predictivo
+    </button>
+    <a class="sidebar-link" href="dashboard.html" target="_blank" id="nav-reniec-dashboard" style="text-decoration:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard Big Data RENIEC ↗
+    </a>
+    <div class="nav-section-label" style="margin-top:.75rem">Soporte</div>
+    <button class="sidebar-link" data-section="chatbot" id="nav-chatbot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Asistente Virtual
+    </button>
+    <button class="sidebar-link" data-section="alertas" id="nav-alertas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      Alertas
+      <span class="sidebar-badge" aria-label="3 alertas">3</span>
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <a href="index.html" class="sidebar-footer-link">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Sitio web principal
+    </a>
+    <button class="sidebar-footer-link" id="logoutBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Cerrar sesión
+    </button>
+  </div>
+</aside>
+
+
+<!-- ════════════════════════════════════════════
+     MAIN CONTENT
+════════════════════════════════════════════ -->
+<div class="portal-main">
+  <!-- Topbar -->
+  <header class="portal-topbar">
+    <div class="topbar-left">
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menú lateral" aria-expanded="false" aria-controls="portalSidebar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div>
+        <div class="topbar-page-title" id="topbarTitle">Dashboard</div>
+        <div class="topbar-breadcrumb">Nexum Asesores · Portal Cliente</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-date" id="topbarDate" aria-live="polite"></div>
+      <div class="live-badge" aria-label="Datos actualizados en vivo">
+        <span class="live-dot" aria-hidden="true"></span>
+        En vivo
+      </div>
+      <button class="topbar-notif" aria-label="3 notificaciones nuevas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="notif-dot" aria-hidden="true"></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Contenido por secciones ── -->
+  <main class="portal-content">
+
+    <!-- ════ SECCIÓN: DASHBOARD ════ -->
+    <section class="portal-section active" id="section-dashboard" aria-labelledby="dash-title">
+      <div class="page-header">
+        <h1 id="dash-title">Dashboard Fiscal</h1>
+        <p id="dash-subtitle">Situación actualizada de tu empresa · <span id="dashDate"></span></p>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid" role="list" aria-label="Indicadores clave">
+
+        <!-- Semáforo de riesgo fiscal -->
+        <div class="kpi-card risk-med" role="listitem" id="kpiRiesgo">
+          <div class="kpi-top">
+            <div>
+              <div class="kpi-label">Score Riesgo Fiscal</div>
+              <div class="kpi-value" id="kpiRiesgoVal">42</div>
+              <div class="kpi-sub">Riesgo moderado</div>
+            </div>
+            <div class="semaforo-wrap" aria-label="Semáforo de riesgo: amarillo (moderado)">
+              <div class="semaforo" aria-hidden="true">
+                <div class="semafor-light" id="semaRed"></div>
+                <div class="semafor-light active-yellow" id="semaYellow"></div>
+                <div class="semafor-light" id="semaGreen"></div>
+              </div>
+              <div class="semaforo-label" id="semaLabel">Moderado</div>
+            </div>
+          </div>
+          <div class="kpi-trend up" aria-label="Mejoró 8 puntos vs. trimestre anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            −8 pts vs. Q1
+          </div>
+        </div>
+
+        <!-- Próximo vencimiento -->
+        <div class="kpi-card neutral" role="listitem">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--danger-bg)" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+          </div>
+          <div class="kpi-label">Próximo Vencimiento</div>
+          <div class="kpi-value" style="color:var(--danger)" id="nextDeadlineDays">6</div>
+          <div class="kpi-sub" id="nextDeadlineLabel">días — Modelo 111 (IRPF)</div>
+          <div class="kpi-trend down" aria-label="Urgente: vence el 20 de julio">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            Vence 20 jul 2026
+          </div>
+        </div>
+
+        <!-- Flujo de caja proyectado -->
+        <div class="kpi-card risk-low" role="listitem">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--success-bg)" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+          </div>
+          <div class="kpi-label">Caja Proyectada (30d)</div>
+          <div class="kpi-value">24.800€</div>
+          <div class="kpi-sub">Suficiente para cubrir vencimientos</div>
+          <div class="kpi-trend up" aria-label="Sube 12% respecto al mes anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            +12% vs. mes anterior
+          </div>
+        </div>
+
+        <!-- Declaraciones al día -->
+        <div class="kpi-card risk-low" role="listitem">
+          <div class="kpi-top">
+            <div class="kpi-icon" style="background:var(--success-bg)" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            </div>
+          </div>
+          <div class="kpi-label">Declaraciones 2026</div>
+          <div class="kpi-value">8/9</div>
+          <div class="kpi-sub">1 pendiente de presentar</div>
+          <div class="kpi-trend up" aria-label="89% de cumplimiento">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="18 15 12 9 6 15"/></svg>
+            89% cumplimiento
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="charts-grid">
+        <div class="chart-card full-width">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Flujo de Caja — Real vs. Proyectado</div>
+              <div class="chart-sub">Comparativa mensual con proyección Prophet a 90 días</div>
+              <div class="chart-legend">
+                <span class="legend-item"><span class="legend-dot" style="background:#0A1628"></span>Real</span>
+                <span class="legend-item"><span class="legend-dot" style="background:#C9A84C"></span>Proyectado</span>
+                <span class="legend-item"><span class="legend-dot" style="background:rgba(201,168,76,.2)"></span>Intervalo confianza</span>
+              </div>
+            </div>
+            <div class="chart-period-btns" role="group" aria-label="Seleccionar período">
+              <button class="period-btn active" data-period="30" aria-pressed="true">30d</button>
+              <button class="period-btn" data-period="60" aria-pressed="false">60d</button>
+              <button class="period-btn" data-period="90" aria-pressed="false">90d</button>
+            </div>
+          </div>
+          <canvas id="chartFlujoCaja" aria-label="Gráfico de flujo de caja real y proyectado" role="img"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Evolución del Score de Riesgo</div>
+              <div class="chart-sub">Últimos 12 meses — Modelo XGBoost</div>
+            </div>
+          </div>
+          <canvas id="chartRiesgo" aria-label="Gráfico de evolución del score de riesgo fiscal" role="img"></canvas>
+          <div class="chart-legend" style="margin-top:.75rem">
+            <span class="legend-item"><span class="legend-dot" style="background:var(--risk-low)"></span>Bajo (0-40)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--risk-med)"></span>Moderado (41-70)</span>
+            <span class="legend-item"><span class="legend-dot" style="background:var(--risk-high)"></span>Alto (71-100)</span>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Facturación Mensual</div>
+              <div class="chart-sub">Ingresos brutos 2026</div>
+            </div>
+          </div>
+          <canvas id="chartFacturacion" aria-label="Gráfico de facturación mensual" role="img"></canvas>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: VENCIMIENTOS ════ -->
+    <section class="portal-section" id="section-vencimientos" aria-labelledby="venc-title">
+      <div class="page-header">
+        <h1 id="venc-title">Calendario de Vencimientos</h1>
+        <p>Alertas inteligentes según tu flujo de caja proyectado</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem">
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:1rem">Próximos 90 días</div>
+          <canvas id="chartVencimientos" aria-label="Gráfico de vencimientos próximos" role="img"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:.5rem">Estado de cumplimiento 2026</div>
+          <div class="chart-sub" style="margin-bottom:1rem">Declaraciones presentadas vs. total</div>
+          <canvas id="chartCumplimiento" aria-label="Gráfico circular de cumplimiento" role="img"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Vencimientos detallados</div>
+            <div class="chart-sub">Ordenados por urgencia — Alertas basadas en caja proyectada</div>
+          </div>
+        </div>
+        <div class="vencimientos-list" id="vencimientosList" role="list" aria-label="Lista de vencimientos fiscales"></div>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: FLUJO DE CAJA ════ -->
+    <section class="portal-section" id="section-flujo" aria-labelledby="flujo-title">
+      <div class="page-header">
+        <h1 id="flujo-title">Proyección de Flujo de Caja</h1>
+        <p>Modelo Prophet — Actualizado con datos de facturación al día de hoy</p>
+      </div>
+
+      <div class="kpi-grid" style="margin-bottom:2rem">
+        <div class="kpi-card neutral">
+          <div class="kpi-label">Saldo actual estimado</div>
+          <div class="kpi-value">31.450€</div>
+          <div class="kpi-sub">Basado en facturas cobradas</div>
+        </div>
+        <div class="kpi-card risk-low">
+          <div class="kpi-label">Proyección 30 días</div>
+          <div class="kpi-value">24.800€</div>
+          <div class="kpi-sub">Después de vencimientos fiscales</div>
+        </div>
+        <div class="kpi-card risk-low">
+          <div class="kpi-label">Proyección 60 días</div>
+          <div class="kpi-value">18.200€</div>
+          <div class="kpi-sub">Margen saludable</div>
+        </div>
+        <div class="kpi-card risk-med">
+          <div class="kpi-label">Proyección 90 días</div>
+          <div class="kpi-value">9.100€</div>
+          <div class="kpi-sub">⚠ Provisionar Q3 IVA</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-card full-width">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Flujo de Caja Proyectado — 90 días</div>
+              <div class="chart-sub">Banda de confianza 80% — Modelo Prophet entrenado con 24 meses de historial</div>
+            </div>
+            <div class="live-badge" aria-label="Actualización automática cada vez que corre el ETL">
+              <span class="live-dot" aria-hidden="true"></span>
+              Auto-actualizado
+            </div>
+          </div>
+          <canvas id="chartFlujoDetalle" aria-label="Gráfico detallado de flujo de caja proyectado a 90 días" role="img" style="max-height:320px"></canvas>
+          <div class="last-update">Última ejecución ETL: hoy 04:12 AM · Próxima: mañana 04:00 AM</div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:.5rem">Alerta de Provisión</div>
+          <div class="chart-sub" style="margin-bottom:1rem">Cuándo provisionar para cada vencimiento</div>
+          <div class="alerts-list" id="provisionAlerts"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-title" style="margin-bottom:.5rem">Componentes del modelo</div>
+          <div class="chart-sub" style="margin-bottom:1rem">Tendencia + Estacionalidad Prophet</div>
+          <canvas id="chartComponentes" aria-label="Gráfico de componentes del modelo de flujo de caja" role="img"></canvas>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: KYC & TAX SHIELD (RENIEC) ════ -->
+    <section class="portal-section" id="section-riesgo" aria-labelledby="riesgo-title">
+      <div class="page-header">
+        <h1 id="riesgo-title">Nexum KYC & Tax Shield</h1>
+        <p>Modelo XGBoost integrado con el padrón de RENIEC — Auditoría preventiva de identidad de proveedores y socios</p>
+      </div>
+
+      <!-- Buscador KYC / RENIEC (Estilo Squarespace Widget) -->
+      <div class="chart-card" style="margin-bottom: 2rem; border-left: 4px solid var(--gold)">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Verificador de Identidad Preventivo</div>
+            <div class="chart-sub">Valida el DNI de tus proveedores o socios contra el padrón nacional de la RENIEC para estimar el riesgo de suplantación.</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1rem">
+          <input type="text" id="kycDniInput" placeholder="Introduce el DNI a verificar (ej. 87654321, 12345678)" 
+                 style="flex:1;min-width:260px;padding:.75rem 1rem;border:1.5px solid rgba(10,22,40,.15);border-radius:8px;font-family:'Inter',sans-serif;font-size:.9rem;outline:none" />
+          <button type="button" class="btn btn-primary" id="kycVerifyBtn" style="padding:.75rem 1.5rem">Consultar RENIEC</button>
+        </div>
+        <!-- Panel de resultado del buscador -->
+        <div id="kycResultPanel" style="display:none;margin-top:1.5rem;padding:1.25rem;background:var(--cream);border-radius:12px;border:1px solid rgba(10,22,40,.06)">
+          <!-- El resultado se inyectará dinámicamente con JS -->
+        </div>
+      </div>
+
+      <div class="model-info-grid">
+        <!-- Score principal -->
+        <div class="model-card">
+          <div class="model-card-header">
+            <div class="model-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="model-card-title">Score de Riesgo Global</div>
+              <div class="model-card-sub">Basado en cumplimiento fiscal e identidades RENIEC</div>
+            </div>
+          </div>
+          <div class="semaforo-wrap" style="flex-direction:row;justify-content:center;gap:2rem;margin:1rem 0">
+            <div class="semaforo" style="flex-direction:row" aria-label="Semáforo de riesgo: amarillo" aria-hidden="true">
+              <div class="semafor-light" style="width:36px;height:36px"></div>
+              <div class="semafor-light active-yellow" style="width:36px;height:36px"></div>
+              <div class="semafor-light" style="width:36px;height:36px"></div>
+            </div>
+            <div class="model-score med" id="shieldScoreVal" aria-label="Score de riesgo: 42 sobre 100">42</div>
+          </div>
+          <div class="progress-bar-wrap" role="progressbar" aria-valuenow="42" aria-valuemin="0" aria-valuemax="100" aria-label="Score de riesgo 42 de 100">
+            <div class="progress-bar-fill" id="riesgoBar" style="width:42%;background:var(--risk-med)"></div>
+          </div>
+          <p style="font-size:.8rem;color:var(--text-mid);margin-top:.75rem;text-align:center">
+            Riesgo <strong style="color:var(--risk-med)">Moderado</strong> — 1 alerta de DNI fallecido activa
+          </p>
+        </div>
+
+        <!-- Features de importancia -->
+        <div class="model-card" style="grid-column:span 2">
+          <div class="model-card-header">
+            <div class="model-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div>
+              <div class="model-card-title">Factores de Riesgo (Feature Importance)</div>
+              <div class="model-card-sub">Contribución de los factores al score total — XGBoost SHAP values</div>
+            </div>
+          </div>
+          <table class="feature-table" aria-label="Factores de riesgo de identidad y fiscales con su importancia y estado">
+            <thead>
+              <tr>
+                <th scope="col">Factor de Riesgo</th>
+                <th scope="col">Importancia (ML)</th>
+                <th scope="col">Valor Evaluado</th>
+                <th scope="col">Estado</th>
+              </tr>
+            </thead>
+            <tbody id="featureTableBody">
+              <!-- Poblado por JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Histórico del score -->
+      <div class="chart-card" style="margin-top:1.5rem">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Evolución del Score de Riesgo (KYC Shield)</div>
+            <div class="chart-sub">Histórico de los últimos 12 meses frente a auditorías fiscales preventivas</div>
+          </div>
+          <div class="live-badge" aria-label="Modelo reentrenado semanalmente">
+            <span class="live-dot" aria-hidden="true"></span>
+            Retrain semanal
+          </div>
+        </div>
+        <canvas id="chartRiesgoHistorico" aria-label="Gráfico histórico del score de riesgo fiscal" role="img"></canvas>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: MODELO PREDICTIVO ════ -->
+    <section class="portal-section" id="section-prediccion" aria-labelledby="pred-title">
+      <div class="page-header">
+        <h1 id="pred-title">Módulo Predictivo</h1>
+        <p>Arquitectura de datos Bronze → Silver → Gold · Stack: Python + Airflow + PostgreSQL + FastAPI</p>
+      </div>
+
+      <!-- Diagrama de pipeline ETL -->
+      <div class="chart-card" style="margin-bottom:1.5rem">
+        <div class="chart-title" style="margin-bottom:1.25rem">Pipeline ETL — Estado de ejecución</div>
+        <div id="etlPipeline" style="display:flex;align-items:center;gap:0;overflow-x:auto;padding:.5rem 0"></div>
+      </div>
+
+      <!-- Métricas de los modelos -->
+      <div class="model-info-grid" style="margin-bottom:1.5rem">
+        <div class="model-card">
+          <div class="model-card-header">
+            <div class="model-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            </div>
+            <div>
+              <div class="model-card-title">Modelo: XGBoost Riesgo</div>
+              <div class="model-card-sub">Score de riesgo fiscal — v2.4.1</div>
+            </div>
+          </div>
+          <table class="feature-table">
+            <tbody>
+              <tr><td>Accuracy</td><td><strong style="color:var(--success)">87.3%</strong></td></tr>
+              <tr><td>F1-Score</td><td><strong style="color:var(--success)">0.84</strong></td></tr>
+              <tr><td>AUC-ROC</td><td><strong style="color:var(--success)">0.91</strong></td></tr>
+              <tr><td>Último retrain</td><td>Lun 14 jul 05:12</td></tr>
+              <tr><td>Drift detectado</td><td><span class="feature-tag tag-good">No</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="model-card">
+          <div class="model-card-header">
+            <div class="model-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            </div>
+            <div>
+              <div class="model-card-title">Modelo: Prophet Flujo de Caja</div>
+              <div class="model-card-sub">Proyección financiera — v1.8.0</div>
+            </div>
+          </div>
+          <table class="feature-table">
+            <tbody>
+              <tr><td>MAE (30d)</td><td><strong style="color:var(--success)">1.240€</strong></td></tr>
+              <tr><td>MAPE</td><td><strong style="color:var(--success)">4.8%</strong></td></tr>
+              <tr><td>RMSE</td><td><strong>1.890€</strong></td></tr>
+              <tr><td>Último retrain</td><td>Lun 14 jul 05:18</td></tr>
+              <tr><td>Drift detectado</td><td><span class="feature-tag tag-good">No</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="model-card">
+          <div class="model-card-header">
+            <div class="model-card-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+            </div>
+            <div>
+              <div class="model-card-title">DAGs de Airflow</div>
+              <div class="model-card-sub">Estado de orquestación</div>
+            </div>
+          </div>
+          <div id="dagStatus"></div>
+        </div>
+      </div>
+
+      <!-- Gráfico de predicción -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <div>
+            <div class="chart-title">Predicción de Ingresos — Prophet 90 días</div>
+            <div class="chart-sub">Serie temporal con banda de incertidumbre 80%</div>
+          </div>
+        </div>
+        <canvas id="chartPrediccion" aria-label="Gráfico de predicción de ingresos a 90 días" role="img" style="max-height:300px"></canvas>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: CHATBOT PRIVADO ════ -->
+    <section class="portal-section" id="section-chatbot" aria-labelledby="chat-title">
+      <div class="page-header">
+        <h1 id="chat-title">Asistente Virtual</h1>
+        <p>Consulta tus datos fiscales en tiempo real — Acceso autenticado</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start">
+        <div class="priv-chat-container" role="region" aria-label="Chat de consultas privadas con datos de tu empresa">
+          <div class="priv-chat-header">
+            <div class="priv-chat-avatar" aria-hidden="true">N</div>
+            <div>
+              <div class="priv-chat-name">Nexum Asistente — Modo Privado</div>
+              <div class="priv-chat-status" id="privChatStatus">Conectado a tus datos · Tecnopyme SL</div>
+            </div>
+          </div>
+          <div class="priv-chat-disclaimer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Información orientativa. Decisiones formales, consulta con tu asesor asignado.
+          </div>
+          <div class="priv-chat-messages" id="privChatMessages" role="log" aria-live="polite" aria-label="Mensajes del asistente virtual privado"></div>
+          <div class="priv-quick-replies" id="privQuickReplies" aria-label="Preguntas rápidas sugeridas"></div>
+          <div class="priv-chat-input-area">
+            <input class="priv-chat-input" type="text" id="privChatInput"
+              placeholder="¿Cuánto debo provisionar este mes?" aria-label="Escribe tu consulta" maxlength="300" />
+            <button class="priv-chat-send" id="privChatSend" aria-label="Enviar consulta" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sidebar de contexto -->
+        <div style="display:flex;flex-direction:column;gap:1rem">
+          <div class="chart-card">
+            <div class="chart-title" style="margin-bottom:.75rem">Datos disponibles</div>
+            <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.82rem;color:var(--text-mid)">
+              <div style="display:flex;justify-content:space-between"><span>Facturas 2026</span><strong style="color:var(--navy)">127</strong></div>
+              <div style="display:flex;justify-content:space-between"><span>Declaraciones hist.</span><strong style="color:var(--navy)">36</strong></div>
+              <div style="display:flex;justify-content:space-between"><span>Pagos registrados</span><strong style="color:var(--navy)">89</strong></div>
+              <div style="display:flex;justify-content:space-between"><span>Score de riesgo</span><strong style="color:var(--risk-med)">42/100</strong></div>
+              <div style="display:flex;justify-content:space-between"><span>Próximo vencimiento</span><strong style="color:var(--danger)">6 días</strong></div>
+            </div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-title" style="margin-bottom:.75rem">Preguntas frecuentes</div>
+            <div style="display:flex;flex-direction:column;gap:.4rem" id="chatSuggestions"></div>
+          </div>
+          <div class="chart-card" style="text-align:center">
+            <p style="font-size:.82rem;color:var(--text-mid);margin-bottom:.75rem">¿Necesitas hablar con tu asesor?</p>
+            <a href="https://wa.me/34612345678" target="_blank" rel="noopener"
+               style="display:flex;align-items:center;justify-content:center;gap:.5rem;background:#25D366;color:#fff;padding:.65rem 1rem;border-radius:var(--radius-sm);font-size:.85rem;font-weight:700;text-decoration:none;transition:background .2s"
+               aria-label="Contactar asesor por WhatsApp">
+              <svg viewBox="0 0 24 24" fill="currentColor" style="width:18px;height:18px" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+              Hablar con asesor
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ════ SECCIÓN: ALERTAS ════ -->
+    <section class="portal-section" id="section-alertas" aria-labelledby="alertas-title">
+      <div class="page-header">
+        <h1 id="alertas-title">Centro de Alertas</h1>
+        <p>Notificaciones inteligentes basadas en tu perfil fiscal y proyecciones de caja</p>
+      </div>
+      <div class="alerts-list" id="alertasList" style="max-width:800px" role="list" aria-label="Lista de alertas fiscales"></div>
+    </section>
+
+  </main>
+</div>
+
+</body>
+</html>
