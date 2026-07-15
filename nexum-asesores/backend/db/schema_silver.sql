@@ -145,6 +145,18 @@ CREATE TABLE IF NOT EXISTS silver.stg_clientes (
 );
 
 -- ════════════════════════════════════════════════════════════
+2: -- stg_usuarios — Usuarios del portal (para autenticación)
+-- ════════════════════════════════════════════════════════════
+CREATE TABLE IF NOT EXISTS silver.stg_usuarios (
+    usuario_id          SERIAL PRIMARY KEY,
+    email               TEXT UNIQUE NOT NULL,
+    password_hash       TEXT NOT NULL,                 -- hash bcrypt
+    cliente_id          TEXT REFERENCES silver.stg_clientes(cliente_id),
+    nombre              TEXT NOT NULL,
+    cargado_en          TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ════════════════════════════════════════════════════════════
 -- Audit log — registro de accesos a datos sensibles
 -- ════════════════════════════════════════════════════════════
 CREATE TABLE IF NOT EXISTS silver.audit_log (

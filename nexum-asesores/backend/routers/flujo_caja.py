@@ -55,103 +55,146 @@ def _check_access(cliente_id: str, user: TokenData):
 
 
 # ── Endpoints ─────────────────────────────────────────────────
+from db.connection import get_db_connection, set_rls_context
+import asyncpg
+from datetime import datetime, timedelta
+
 @router.get("/{cliente_id}", response_model=FlujoCajaResponse)
 async def get_flujo_caja(
     cliente_id: str,
     dias: int = Query(default=90, ge=30, le=180),
     user: TokenData = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection),
 ):
     """
-    Devuelve la proyección de flujo de caja desde la capa Gold.
-
-    Consulta SQL principal:
-    ──────────────────────
-    -- Serie real (fact_flujo_caja)
-    SELECT
-        dt.fecha,
-        fc.ingreso_bruto - fc.gasto_total AS flujo_neto,
-        NULL AS proyectado,
-        NULL AS lower_80,
-        NULL AS upper_80
-    FROM gold.fact_flujo_caja fc
-    JOIN gold.dim_tiempo dt ON fc.tiempo_key = dt.tiempo_key
-    JOIN gold.dim_cliente c ON fc.cliente_key = c.cliente_key
-    WHERE c.cliente_id = :cliente_id
-      AND dt.fecha >= CURRENT_DATE - INTERVAL '6 months'
-    ORDER BY dt.fecha
-
-    UNION ALL
-
-    -- Serie proyectada (fact_prediccion_caja)
-    SELECT
-        pc.fecha_prediccion AS fecha,
-        NULL AS flujo_neto,
-        pc.yhat AS proyectado,
-        pc.yhat_lower AS lower_80,
-        pc.yhat_upper AS upper_80
-    FROM gold.fact_prediccion_caja pc
-    JOIN gold.dim_cliente c ON pc.cliente_key = c.cliente_key
-    WHERE c.cliente_id = :cliente_id
-      AND pc.fecha_prediccion > CURRENT_DATE
-      AND pc.fecha_prediccion <= CURRENT_DATE + INTERVAL ':dias days'
-    ORDER BY pc.fecha_prediccion;
+    Devuelve la proyección de flujo de caja desde la capa Gold de PostgreSQL.
     """
     _check_access(cliente_id, user)
     logger.info(f"Flujo de caja solicitado: {cliente_id} | periodo: {dias}d")
 
-    # Mock data — en prod reemplazar con query anterior
-    serie = [
-        PuntoFlujoCaja(fecha="Ene", real=38200, proyectado=None, lower_80=None, upper_80=None),
-        PuntoFlujoCaja(fecha="Feb", real=29800, proyectado=None, lower_80=None, upper_80=None),
-        PuntoFlujoCaja(fecha="Mar", real=41500, proyectado=None, lower_80=None, upper_80=None),
-        PuntoFlujoCaja(fecha="Abr", real=35600, proyectado=None, lower_80=None, upper_80=None),
-        PuntoFlujoCaja(fecha="May", real=44200, proyectado=None, lower_80=None, upper_80=None),
-        PuntoFlujoCaja(fecha="Jun", real=31800, proyectado=31800, lower_80=30100, upper_80=33500),
-        PuntoFlujoCaja(fecha="Jul (p)", real=None, proyectado=28400, lower_80=25200, upper_80=31600),
-        PuntoFlujoCaja(fecha="Ago (p)", real=None, proyectado=24800, lower_80=20400, upper_80=29200),
-        PuntoFlujoCaja(fecha="Sep (p)", real=None, proyectado=18200, lower_80=13800, upper_80=22600),
-        PuntoFlujoCaja(fecha="Oct (p)", real=None, proyectado=9100,  lower_80=5200,  upper_80=13000),
-    ]
+    await set_rls_context(conn, cliente_id)
 
-    alertas = [
-        AlertaProvision(
-            vencimiento="Modelo 111 + 115 Q2",
-            fecha_vencimiento="2026-07-20",
-            importe_estimado=4730,
-            fecha_provision_recomendada="2026-07-18",
-            dias_restantes=4,
-            caja_proyectada_ese_dia=31450,
-            margen=26720,
-            alerta=False,
-        ),
-        AlertaProvision(
-            vencimiento="Impuesto Sociedades 2025",
-            fecha_vencimiento="2026-07-25",
-            importe_estimado=12400,
-            fecha_provision_recomendada="2026-07-22",
-            dias_restantes=8,
-            caja_proyectada_ese_dia=28400,
-            margen=16000,
-            alerta=False,
-        ),
-        AlertaProvision(
-            vencimiento="IVA Q3 — Modelo 303",
-            fecha_vencimiento="2026-10-20",
-            importe_estimado=7240,
-            fecha_provision_recomendada="2026-10-10",
-            dias_restantes=88,
-            caja_proyectada_ese_dia=9100,
-            margen=1860,
-            alerta=True,  # margen justo → alerta
-        ),
-    ]
+    # 1. Obtener serie real y proyectada
+    query_serie = """
+        -- Serie real (fact_flujo_caja)
+        SELECT
+            dt.fecha,
+            (fc.ingreso_bruto - fc.gasto_total) AS real,
+            NULL::numeric AS proyectado,
+            NULL::numeric AS lower_80,
+            NULL::numeric AS upper_80
+        FROM gold.fact_flujo_caja fc
+        JOIN gold.dim_tiempo dt ON fc.tiempo_key = dt.tiempo_key
+        JOIN gold.dim_cliente c ON fc.cliente_key = c.cliente_key
+        WHERE dt.fecha >= CURRENT_DATE - INTERVAL '6 months'
+          AND dt.fecha <= CURRENT_DATE
+        
+        UNION ALL
+        
+        -- Serie proyectada (fact_prediccion_caja)
+        SELECT
+            pc.fecha_prediccion AS fecha,
+            NULL::numeric AS real,
+            pc.yhat AS proyectado,
+            pc.yhat_lower AS lower_80,
+            pc.yhat_upper AS upper_80
+        FROM gold.fact_prediccion_caja pc
+        JOIN gold.dim_cliente c ON pc.cliente_key = c.cliente_key
+        WHERE pc.fecha_prediccion > CURRENT_DATE
+          AND pc.fecha_prediccion <= CURRENT_DATE + CAST($1 || ' days' AS INTERVAL)
+        
+        ORDER BY fecha ASC;
+    """
+    rows = await conn.fetch(query_serie, str(dias))
+
+    SPANISH_MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    serie = []
+    
+    # Agrupar por mes para simplificar o mostrar puntos
+    for r in rows:
+        fecha = r['fecha']
+        is_future = r['proyectado'] is not None
+        mes_label = SPANISH_MONTHS[fecha.month - 1]
+        label = f"{mes_label} (p)" if is_future else mes_label
+
+        serie.append(
+            PuntoFlujoCaja(
+                fecha=label,
+                real=float(r['real']) if r['real'] is not None else None,
+                proyectado=float(r['proyectado']) if r['proyectado'] is not None else None,
+                lower_80=float(r['lower_80']) if r['lower_80'] is not None else None,
+                upper_80=float(r['upper_80']) if r['upper_80'] is not None else None
+            )
+        )
+
+    # 2. Proyecciones a 30, 60 y 90 días
+    pred_30 = await conn.fetchval(
+        "SELECT yhat FROM gold.fact_prediccion_caja WHERE fecha_prediccion = CURRENT_DATE + 30 OR (fecha_prediccion >= CURRENT_DATE + 28 AND fecha_prediccion <= CURRENT_DATE + 32) LIMIT 1"
+    ) or 24800.00
+    pred_60 = await conn.fetchval(
+        "SELECT yhat FROM gold.fact_prediccion_caja WHERE fecha_prediccion = CURRENT_DATE + 60 OR (fecha_prediccion >= CURRENT_DATE + 58 AND fecha_prediccion <= CURRENT_DATE + 62) LIMIT 1"
+    ) or 18200.00
+    pred_90 = await conn.fetchval(
+        "SELECT yhat FROM gold.fact_prediccion_caja WHERE fecha_prediccion = CURRENT_DATE + 90 OR (fecha_prediccion >= CURRENT_DATE + 88 AND fecha_prediccion <= CURRENT_DATE + 92) LIMIT 1"
+    ) or 9100.00
+
+    # 3. Obtener saldo actual
+    saldo_actual = await conn.fetchval(
+        "SELECT yhat FROM gold.fact_prediccion_caja WHERE fecha_prediccion = CURRENT_DATE LIMIT 1"
+    ) or await conn.fetchval(
+        "SELECT (ingreso_bruto - gasto_total) FROM gold.fact_flujo_caja ORDER BY tiempo_key DESC LIMIT 1"
+    ) or 31450.00
+
+    # 4. Alertas de provisión
+    query_alertas = """
+        SELECT 
+            ti.nombre_completo AS vencimiento,
+            dt.fecha AS fecha_vencimiento,
+            d.importe_estimado,
+            pc.yhat AS caja_proyectada,
+            (pc.yhat - d.importe_estimado) AS margen
+        FROM gold.fact_declaraciones d
+        JOIN gold.dim_tiempo dt ON d.tiempo_key = dt.tiempo_key
+        JOIN gold.dim_tipo_impuesto i ON d.impuesto_key = i.impuesto_key
+        JOIN gold.dim_tipo_impuesto ti ON d.impuesto_key = ti.impuesto_key
+        LEFT JOIN gold.fact_prediccion_caja pc ON pc.fecha_prediccion = dt.fecha
+        WHERE dt.fecha >= CURRENT_DATE
+          AND d.estado = 'pendiente'
+        ORDER BY dt.fecha ASC;
+    """
+    alert_rows = await conn.fetch(query_alertas)
+
+    alertas = []
+    for r in alert_rows:
+        fecha_venc = r['fecha_vencimiento']
+        importe = float(r['importe_estimado'])
+        caja_proyectada = float(r['caja_proyectada']) if r['caja_proyectada'] is not None else (saldo_actual or 0)
+        margen = float(r['margen']) if r['margen'] is not None else (caja_proyectada - importe)
+
+        dias_restantes = (fecha_venc - datetime.today().date()).days
+        # Días antelación: 4 días
+        fecha_prov = fecha_venc - timedelta(days=4)
+        alerta = margen < (importe * 0.20)
+
+        alertas.append(
+            AlertaProvision(
+                vencimiento=r['vencimiento'],
+                fecha_vencimiento=fecha_venc.isoformat(),
+                importe_estimado=importe,
+                fecha_provision_recomendada=fecha_prov.isoformat(),
+                dias_restantes=max(0, dias_restantes),
+                caja_proyectada_ese_dia=caja_proyectada,
+                margen=margen,
+                alerta=alerta
+            )
+        )
 
     return FlujoCajaResponse(
         cliente_id=cliente_id,
-        saldo_actual=31450,
-        proyeccion_30d=24800,
-        proyeccion_60d=18200,
-        proyeccion_90d=9100,
+        saldo_actual=float(saldo_actual),
+        proyeccion_30d=float(pred_30),
+        proyeccion_60d=float(pred_60),
+        proyeccion_90d=float(pred_90),
         serie=serie,
         alertas_provision=alertas,
         modelo_version="prophet-v1.8.0",

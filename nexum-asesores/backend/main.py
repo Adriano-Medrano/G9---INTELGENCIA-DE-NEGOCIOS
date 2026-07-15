@@ -23,6 +23,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nexum.api")
 
+from contextlib import asynccontextmanager
+from db.connection import init_pool, close_pool
+
+# ── Lifespan ──────────────────────────────────────────────────
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_pool()
+    yield
+    await close_pool()
+
 # ── App ───────────────────────────────────────────────────────
 app = FastAPI(
     title="Nexum Asesores — API Fiscal",
@@ -35,6 +45,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # ── CORS ──────────────────────────────────────────────────────

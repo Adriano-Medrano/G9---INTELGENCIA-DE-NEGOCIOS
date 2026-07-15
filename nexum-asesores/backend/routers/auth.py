@@ -92,47 +92,76 @@ async def get_current_user(
 
 
 # ── Endpoints ─────────────────────────────────────────────────
+import bcrypt
+from db.connection import get_db_connection
+from fastapi import Request
+import asyncpg
+
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+async def login(
+    body: LoginRequest,
+    request: Request,
+    conn: asyncpg.Connection = Depends(get_db_connection),
+):
     """
-    Autentica a un usuario cliente del portal.
-
-    En producción:
-    - Consulta PostgreSQL: SELECT * FROM usuarios WHERE email = :email
-    - Verifica contraseña con bcrypt
-    - Registra intento en audit_log
-
-    Aquí: mock con datos de prueba.
+    Autentica a un usuario cliente del portal consultando PostgreSQL,
+    verificando el hash bcrypt y registrando el acceso en audit_log.
     """
-    # TODO: reemplazar con consulta real a PostgreSQL
-    MOCK_USERS = {
-        "demo@pyme.es": {
-            "password_hash": "nexum2026",  # usar bcrypt en prod
-            "cliente_id":    "CL-2024-0042",
-            "nombre":        "Tecnopyme SL",
-        },
-    }
+    query = """
+        SELECT u.password_hash, u.cliente_id, u.nombre, c.razon_social
+        FROM silver.stg_usuarios u
+        LEFT JOIN silver.stg_clientes c ON u.cliente_id = c.cliente_id
+        WHERE u.email = $1
+    """
+    user_row = await conn.fetchrow(query, body.email)
 
-    user = MOCK_USERS.get(body.email)
-    if not user or user["password_hash"] != body.password:
-        logger.warning(f"Intento de login fallido: {body.email}")
+    if not user_row:
+        logger.warning(f"Intento de login fallido: {body.email} (usuario no encontrado)")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas.",
         )
 
+    # Verificar contraseña con bcrypt
+    pwd_bytes = body.password.encode('utf-8')
+    hash_bytes = user_row['password_hash'].encode('utf-8')
+    
+    if not bcrypt.checkpw(pwd_bytes, hash_bytes):
+        logger.warning(f"Intento de login fallido: {body.email} (contraseña incorrecta)")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Credenciales incorrectas.",
+        )
+
+    # Registrar en audit_log
+    audit_query = """
+        INSERT INTO silver.audit_log (cliente_id, usuario_email, endpoint, accion, ip_origen, user_agent)
+        VALUES ($1, $2, $3, $4, $5, $6)
+    """
+    ip_origen = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    await conn.execute(
+        audit_query,
+        user_row['cliente_id'],
+        body.email,
+        "/auth/login",
+        "login_exitoso",
+        ip_origen,
+        user_agent
+    )
+
     token = create_access_token({
-        "cliente_id": user["cliente_id"],
+        "cliente_id": user_row["cliente_id"],
         "email":      body.email,
     })
 
-    logger.info(f"Login exitoso: {body.email} → {user['cliente_id']}")
+    logger.info(f"Login exitoso: {body.email} → {user_row['cliente_id']}")
 
     return TokenResponse(
         access_token=token,
         expires_in=TOKEN_TTL_H * 3600,
-        cliente_id=user["cliente_id"],
-        cliente_nombre=user["nombre"],
+        cliente_id=user_row["cliente_id"],
+        cliente_nombre=user_row["razon_social"] or user_row["nombre"],
     )
 
 

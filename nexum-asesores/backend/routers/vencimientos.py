@@ -44,36 +44,11 @@ async def get_vencimientos(
     cliente_id: str,
     dias: int = Query(default=90, ge=7, le=365, description="Horizonte en días"),
     user: TokenData = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db_connection),
 ):
     """
     Devuelve todos los vencimientos fiscales del cliente en el
-    horizonte solicitado, enriquecidos con la caja proyectada
-    (JOIN con fact_prediccion_caja para alertas inteligentes).
-
-    Consulta SQL (capa Gold):
-    ──────────────────────────
-    SELECT
-        d.declaracion_id,
-        ti.nombre_modelo,
-        ti.descripcion,
-        dt.fecha                          AS fecha_vencimiento,
-        dt.fecha - CURRENT_DATE           AS dias_restantes,
-        d.importe_estimado,
-        d.estado,
-        pc.yhat                           AS caja_proyectada,
-        pc.yhat - d.importe_estimado      AS margen_caja,
-        dt.fecha - INTERVAL '4 days'      AS fecha_provision_recomendada
-    FROM gold.fact_declaraciones d
-    JOIN gold.dim_tiempo dt        ON d.tiempo_key = dt.tiempo_key
-    JOIN gold.dim_tipo_impuesto ti ON d.impuesto_key = ti.impuesto_key
-    JOIN gold.dim_cliente c        ON d.cliente_key = c.cliente_key
-    LEFT JOIN gold.fact_prediccion_caja pc
-        ON pc.cliente_key = d.cliente_key
-        AND pc.fecha_prediccion = dt.fecha
-    WHERE c.cliente_id = :cliente_id
-      AND dt.fecha BETWEEN CURRENT_DATE - INTERVAL '1 month'
-                       AND CURRENT_DATE + INTERVAL ':dias days'
-    ORDER BY dt.fecha ASC;
+    horizonte solicitado, enriquecidos con la caja proyectada de PostgreSQL.
     """
     if user.cliente_id != cliente_id:
         from fastapi import HTTPException
@@ -81,57 +56,66 @@ async def get_vencimientos(
 
     logger.info(f"Vencimientos solicitados: {cliente_id} | horizonte: {dias}d")
 
-    # Mock data desde la capa Gold
-    vencimientos = [
-        Vencimiento(
-            id="V-2026-0041", modelo_fiscal="Modelo 111 — IRPF Retenciones",
-            descripcion="Retenciones trabajadores Q2 2026",
-            fecha_vencimiento="2026-07-20", dias_restantes=6,
-            importe_estimado=3840.00, estado="urgente",
-            caja_disponible_ese_dia=31450, margen_caja=27610,
-            fecha_provision_recomendada="2026-07-16",
-        ),
-        Vencimiento(
-            id="V-2026-0042", modelo_fiscal="Modelo 115 — Alquiler",
-            descripcion="Retención alquiler Q2 2026",
-            fecha_vencimiento="2026-07-20", dias_restantes=6,
-            importe_estimado=890.00, estado="urgente",
-            caja_disponible_ese_dia=31450, margen_caja=30560,
-            fecha_provision_recomendada="2026-07-16",
-        ),
-        Vencimiento(
-            id="V-2026-0043", modelo_fiscal="Modelo 130 — IRPF fraccionado",
-            descripcion="Pago fraccionado IRPF Q2 2026",
-            fecha_vencimiento="2026-07-20", dias_restantes=6,
-            importe_estimado=1200.00, estado="urgente",
-            caja_disponible_ese_dia=31450, margen_caja=30250,
-            fecha_provision_recomendada="2026-07-16",
-        ),
-        Vencimiento(
-            id="V-2026-0044", modelo_fiscal="Modelo 200 — IS 2025",
-            descripcion="Impuesto Sociedades ejercicio 2025",
-            fecha_vencimiento="2026-07-25", dias_restantes=11,
-            importe_estimado=12400.00, estado="proximo",
-            caja_disponible_ese_dia=28400, margen_caja=16000,
-            fecha_provision_recomendada="2026-07-22",
-        ),
-        Vencimiento(
-            id="V-2026-0045", modelo_fiscal="Modelo 303 — IVA Q3",
-            descripcion="IVA tercer trimestre 2026",
-            fecha_vencimiento="2026-10-20", dias_restantes=98,
-            importe_estimado=7240.00, estado="ok",
-            caja_disponible_ese_dia=9100, margen_caja=1860,
-            fecha_provision_recomendada="2026-10-10",
-        ),
-        Vencimiento(
-            id="V-2026-0040", modelo_fiscal="Modelo 303 — IVA Q2",
-            descripcion="IVA segundo trimestre 2026",
-            fecha_vencimiento="2026-04-20", dias_restantes=0,
-            importe_estimado=6840.00, estado="completado",
-            caja_disponible_ese_dia=None, margen_caja=None,
-            fecha_provision_recomendada=None,
-        ),
-    ]
+    await set_rls_context(conn, cliente_id)
+
+    query = """
+        SELECT
+            d.declaracion_id AS id,
+            ti.nombre_completo AS modelo_fiscal,
+            ti.descripcion || ' (' || d.periodo || ')' AS descripcion,
+            dt.fecha AS fecha_vencimiento,
+            d.importe_estimado,
+            d.estado AS db_estado,
+            pc.yhat AS caja_disponible_ese_dia,
+            (pc.yhat - d.importe_estimado) AS margen_caja
+        FROM gold.fact_declaraciones d
+        JOIN gold.dim_tiempo dt        ON d.tiempo_key = dt.tiempo_key
+        JOIN gold.dim_tipo_impuesto ti ON d.impuesto_key = ti.impuesto_key
+        LEFT JOIN gold.fact_prediccion_caja pc ON pc.fecha_prediccion = dt.fecha
+        WHERE dt.fecha >= CURRENT_DATE - INTERVAL '3 months'
+          AND dt.fecha <= CURRENT_DATE + CAST($1 || ' days' AS INTERVAL)
+        ORDER BY dt.fecha ASC;
+    """
+    rows = await conn.fetch(query, str(dias))
+
+    vencimientos = []
+    today = datetime.today().date()
+
+    for r in rows:
+        fecha_venc = r['fecha_vencimiento']
+        dias_restantes = (fecha_venc - today).days
+        db_estado = r['db_estado']
+        importe = float(r['importe_estimado'])
+
+        # Determinar el estado lógico para el frontend
+        if db_estado == 'presentada':
+            estado = "completado"
+        elif dias_restantes < 0:
+            estado = "completado"  # Si ya pasó la fecha se considera completado
+        elif dias_restantes <= 7:
+            estado = "urgente"
+        elif dias_restantes <= 30:
+            estado = "proximo"
+        else:
+            estado = "ok"
+
+        # Fecha de provisión recomendada (4 días antes)
+        fecha_provision = (fecha_venc - timedelta(days=4)).isoformat() if db_estado == 'pendiente' else None
+
+        vencimientos.append(
+            Vencimiento(
+                id=r['id'],
+                modelo_fiscal=r['modelo_fiscal'],
+                descripcion=r['descripcion'],
+                fecha_vencimiento=fecha_venc.isoformat(),
+                dias_restantes=max(0, dias_restantes),
+                importe_estimado=importe,
+                estado=estado,
+                caja_disponible_ese_dia=float(r['caja_disponible_ese_dia']) if r['caja_disponible_ese_dia'] is not None else None,
+                margen_caja=float(r['margen_caja']) if r['margen_caja'] is not None else None,
+                fecha_provision_recomendada=fecha_provision
+            )
+        )
 
     urgentes = [v for v in vencimientos if v.estado == "urgente"]
     proximos  = [v for v in vencimientos if v.estado == "proximo"]
