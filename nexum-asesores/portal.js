@@ -5,6 +5,11 @@
    ============================================================ */
 'use strict';
 
+// URL dinámica del backend (localhost para local, Render para producción)
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000'
+  : 'https://g9-inteligencia-de-negocios.onrender.com';
+
 /* ══════════════════════════════════════════════════════════
    MOCK DATA — Simula la capa Gold de PostgreSQL
    En producción estos datos vendrían de:
@@ -96,7 +101,7 @@ const AUTH = {
 
   async login(email, pass) {
     try {
-      const response = await fetch('http://localhost:8000/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: pass })
@@ -218,10 +223,10 @@ async function loadPortalData() {
 
   try {
     const [riesgoRes, flujoRes, vencRes, histRes] = await Promise.all([
-      fetch(`http://localhost:8000/riesgo/${clienteId}`, { headers }),
-      fetch(`http://localhost:8000/flujo-caja/${clienteId}`, { headers }),
-      fetch(`http://localhost:8000/vencimientos/${clienteId}`, { headers }),
-      fetch(`http://localhost:8000/riesgo/${clienteId}/historico`, { headers })
+      fetch(`${API_BASE_URL}/riesgo/${clienteId}`, { headers }),
+      fetch(`${API_BASE_URL}/flujo-caja/${clienteId}`, { headers }),
+      fetch(`${API_BASE_URL}/vencimientos/${clienteId}`, { headers }),
+      fetch(`${API_BASE_URL}/riesgo/${clienteId}/historico`, { headers })
     ]);
 
     if (!riesgoRes.ok || !flujoRes.ok || !vencRes.ok || !histRes.ok) {
@@ -1522,7 +1527,7 @@ function initKycShield() {
     resultEl.style.display = 'none';
 
     try {
-      const response = await fetch(`http://localhost:8000/riesgo/${AUTH.getClienteId()}/kyc-verify/${dni}`, {
+      const response = await fetch(`${API_BASE_URL}/riesgo/${AUTH.getClienteId()}/kyc-verify/${dni}`, {
         headers: AUTH.getAuthHeaders()
       });
 
