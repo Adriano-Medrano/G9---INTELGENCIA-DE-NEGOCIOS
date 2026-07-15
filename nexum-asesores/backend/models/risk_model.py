@@ -7,13 +7,13 @@
 import os
 import logging
 import pickle
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, RandomizedSearchCV, StratifiedKFold
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import (
     accuracy_score, f1_score, roc_auc_score, classification_report
@@ -129,22 +129,46 @@ def train(X: pd.DataFrame, y: pd.Series, version: str = "auto") -> Dict:
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    model = xgb.XGBClassifier(
-        n_estimators=200,
-        max_depth=5,
-        learning_rate=0.05,
-        subsample=0.8,
-        colsample_bytree=0.8,
-        min_child_weight=3,
-        gamma=0.1,
+    # Definir el modelo base
+    base_model = xgb.XGBClassifier(
         objective="multi:softprob",
         num_class=3,
         eval_metric="mlogloss",
-        use_label_encoder=False,
         random_state=42,
         n_jobs=-1,
     )
+    
+    # Grid de hiperparámetros para la búsqueda
+    param_distributions = {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [3, 5, 7],
+        'learning_rate': [0.01, 0.05, 0.1],
+        'subsample': [0.8, 1.0],
+        'colsample_bytree': [0.8, 1.0],
+        'min_child_weight': [1, 3, 5],
+        'gamma': [0, 0.1, 0.2]
+    }
+    
+    cv = StratifiedKFold(n_splits=3, shuffle=True, random_state=42)
+    
+    logger.info("Optimizando hiperparámetros con RandomizedSearchCV...")
+    search = RandomizedSearchCV(
+        estimator=base_model,
+        param_distributions=param_distributions,
+        n_iter=10,
+        scoring='f1_weighted',
+        cv=cv,
+        verbose=0,
+        random_state=42,
+        n_jobs=-1
+    )
+    
+    search.fit(X_train, y_train)
+    model = search.best_estimator_
+    logger.info(f"Mejores parámetros encontrados: {search.best_params_}")
 
+    logger.info("Re-entrenando el mejor modelo con early_stopping...")
+    model.set_params(early_stopping_rounds=10)
     model.fit(
         X_train, y_train,
         eval_set=[(X_test, y_test)],
@@ -166,7 +190,7 @@ def train(X: pd.DataFrame, y: pd.Series, version: str = "auto") -> Dict:
         "auc_roc": round(auc, 4),
         "n_train": len(X_train),
         "n_test":  len(X_test),
-        "trained_at": datetime.utcnow().isoformat(),
+        "trained_at": datetime.now(timezone.utc).isoformat(),
         "feature_importances": dict(zip(FEATURES, model.feature_importances_.tolist())),
     }
 
@@ -243,7 +267,7 @@ def check_drift(
         "current_f1":     current_f1,
         "drop":           round(drop, 4),
         "threshold":      threshold_drop,
-        "timestamp":      datetime.utcnow().isoformat(),
+        "timestamp":      datetime.now(timezone.utc).isoformat(),
     }
 
     if drift_detected:
@@ -259,35 +283,53 @@ def check_drift(
 
 
 if __name__ == "__main__":
-    # Datos sintéticos de ejemplo
+    # 1. Datos sintéticos de ejemplo - BASELINE
     np.random.seed(42)
     n = 300
-    X_demo = pd.DataFrame({
-        "dias_promedio_atraso":       np.random.exponential(2, n),
-        "pct_declaraciones_tarde":    np.random.beta(2, 8, n),
-        "ratio_iva_irpf":             np.random.normal(0.15, 0.05, n).clip(0, 1),
-        "sector_riesgo_score":        np.random.choice([1, 2, 3], n),
-        "tiene_sanciones":            np.random.binomial(1, 0.1, n),
-        "pct_contrapartes_fallecidas":np.random.beta(0.5, 9, n),  # la mayoría tiene 0
-        "pct_identidades_invalidas":  np.random.beta(0.5, 9, n),
-        "desviacion_ubigeo_fiscal":   np.random.binomial(1, 0.15, n),
-        "n_dni_sospechosos":          np.random.poisson(0.1, n),
-        "representante_suplantado_risk": np.random.binomial(1, 0.05, n),
-    })
-    # Score sintético como función lineal de las features de identidad y contabilidad
-    raw_score = (
-        X_demo["dias_promedio_atraso"] * 4 +
-        X_demo["pct_contrapartes_fallecidas"] * 120 +
-        X_demo["pct_identidades_invalidas"] * 150 +
-        X_demo["n_dni_sospechosos"] * 25 +
-        X_demo["representante_suplantado_risk"] * 40 +
-        X_demo["tiene_sanciones"] * 15 +
-        np.random.normal(0, 5, n)
-    ).clip(0, 100)
+    
+    def generate_demo_data(n_samples, fraud_multiplier=1.0):
+        X = pd.DataFrame({
+            "dias_promedio_atraso":       np.random.exponential(2, n_samples),
+            "pct_declaraciones_tarde":    np.random.beta(2, 8, n_samples),
+            "ratio_iva_irpf":             np.random.normal(0.15, 0.05, n_samples).clip(0, 1),
+            "sector_riesgo_score":        np.random.choice([1, 2, 3], n_samples),
+            "tiene_sanciones":            np.random.binomial(1, 0.1, n_samples),
+            "pct_contrapartes_fallecidas":np.random.beta(0.5, 9, n_samples) * fraud_multiplier, 
+            "pct_identidades_invalidas":  np.random.beta(0.5, 9, n_samples) * fraud_multiplier,
+            "desviacion_ubigeo_fiscal":   np.random.binomial(1, min(1.0, 0.15 * fraud_multiplier), n_samples),
+            "n_dni_sospechosos":          np.random.poisson(0.1 * fraud_multiplier, n_samples),
+            "representante_suplantado_risk": np.random.binomial(1, min(1.0, 0.05 * fraud_multiplier), n_samples),
+        })
+        raw_score = (
+            X["dias_promedio_atraso"] * 4 +
+            X["pct_contrapartes_fallecidas"] * 120 +
+            X["pct_identidades_invalidas"] * 150 +
+            X["n_dni_sospechosos"] * 25 +
+            X["representante_suplantado_risk"] * 40 +
+            X["tiene_sanciones"] * 15 +
+            np.random.normal(0, 5, n_samples)
+        ).clip(0, 100)
+        y = raw_score.apply(label_risk)
+        return X, y
 
-    y_demo = raw_score.apply(label_risk)
-    metrics = train(X_demo, y_demo, version="xgboost-v2.5.0-kyc-shield")
-    print("Métricas de entrenamiento demo:", metrics)
+    X_baseline, y_baseline = generate_demo_data(n, fraud_multiplier=1.0)
+    
+    print("\n--- ENTRENAMIENTO BASELINE ---")
+    baseline_metrics = train(X_baseline, y_baseline, version="xgboost-v2.5.0-kyc-shield")
+    print("\nMétricas de entrenamiento demo:", baseline_metrics)
 
-    preds = predict_score(X_demo.head(3))
-    print("Predicciones demo:", preds)
+    print("\n--- SIMULANDO DRIFT (CAMBIO EN PATRONES DE FRAUDE) ---")
+    # Aumentamos el multiplicador de fraude para simular un cambio en el mercado
+    X_drift, y_drift = generate_demo_data(n, fraud_multiplier=5.0)
+    
+    # Hacemos predicciones con el modelo actual pero evaluamos con las nuevas etiquetas
+    preds_drift = predict_score(X_drift)
+    # Extraemos solo las etiquetas (0, 1, 2)
+    y_pred_drift = [{"bajo": 0, "moderado": 1, "alto": 2}[p["nivel"]] for p in preds_drift]
+    current_f1 = f1_score(y_drift, y_pred_drift, average="weighted")
+    
+    print(f"F1 actual en nuevos datos con alto fraude: {current_f1:.4f}")
+    
+    # Ejecutamos el check_drift que alertará de la caída
+    print("\n--- EJECUTANDO DRIFT CHECK ---")
+    check_drift(baseline_metrics, current_f1, threshold_drop=0.05)
