@@ -29,19 +29,32 @@ _pool: asyncpg.Pool | None = None
 async def init_pool():
     """Inicializa el pool de conexiones async al arrancar la app."""
     global _pool
+    import urllib.parse
     
     dsn = DB_URL_ASYNC.replace("postgresql+asyncpg://", "postgresql://")
     
-    # Manejar el parámetro sslmode para evitar el error de asyncpg (bad query field: sslmode)
+    # Limpiar el parámetro sslmode de la query string para evitar errores en asyncpg
     ssl_arg = None
-    if "sslmode=" in dsn:
-        if "sslmode=require" in dsn:
-            ssl_arg = True
-        # Limpiar el query param de la DSN
-        if "?" in dsn:
-            base, query = dsn.split("?", 1)
-            params = [p for p in query.split("&") if not p.startswith("sslmode=")]
-            dsn = base + ("?" + "&".join(params) if params else "")
+    parsed = urllib.parse.urlparse(dsn)
+    if parsed.query:
+        params = urllib.parse.parse_qsl(parsed.query)
+        clean_params = []
+        for k, v in params:
+            if k.lower() == "sslmode":
+                if v.lower() == "require":
+                    ssl_arg = True
+            else:
+                clean_params.append((k, v))
+        # Reconstruir DSN sin sslmode
+        new_query = urllib.parse.urlencode(clean_params)
+        dsn = urllib.parse.urlunparse((
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            new_query,
+            parsed.fragment
+        ))
 
     _pool = await asyncpg.create_pool(
         dsn=dsn,
